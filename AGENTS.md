@@ -186,35 +186,35 @@ class DashboardViewModel @Inject constructor(
 
 ## Important Files
 
-| File | Purpose |
-|------|---------|
-| `FocusFlowDatabase.kt` | Room `@Database` definition, singleton instance |
-| `AppModule.kt` | Hilt module providing Database, DAOs, Repositories |
-| `AppNavigation.kt` | NavHost, bottom tab routing |
-| `TimerService.kt` | Foreground Service for persistent timer |
-| `ReviewReminderWorker.kt` | WorkManager for daily review notifications |
-| `BackupManager.kt` | JSON export/import with schema versioning |
-| `StreakCalculator.kt` | Streak logic (5min threshold, freeze days, monthly reset) |
-| `ReviewScheduler.kt` | Review interval calculation (default [1,3,7,14,30] days) |
-| `build.gradle.kts` (app) | Dependencies, SDK versions, Room schema config |
+|File|Purpose|
+|---|---|
+|`FocusFlowDatabase.kt`|Room `@Database` definition, singleton instance|
+|`AppModule.kt`|Hilt module providing Database, DAOs, Repositories|
+|`AppNavigation.kt`|NavHost, bottom tab routing|
+|`TimerService.kt`|Foreground Service for persistent timer|
+|`ReviewReminderWorker.kt`|WorkManager for daily review notifications|
+|`BackupManager.kt`|JSON export/import with schema versioning|
+|`StreakCalculator.kt`|Streak logic (5min threshold, freeze days, monthly reset)|
+|`ReviewScheduler.kt`|Review interval calculation (default [1,3,7,14,30] days)|
+|`build.gradle.kts` (app)|Dependencies, SDK versions, Room schema config|
 
 ---
 
 ## Runtime & Tooling
 
-| Tool | Version / Notes |
-|------|----------------|
-| **Language** | Kotlin 2.0+ |
-| **Min SDK** | API 26 (Android 8.0) |
-| **Target SDK** | API 35 (latest stable) |
-| **Build** | Gradle 8.x + KSP (for Room annotation processing) |
-| **DI** | Hilt 2.x |
-| **Database** | Room 2.6.x |
-| **UI** | Jetpack Compose (BOM 2024.12+) + Material 3 |
-| **Charts** | Vico 2.x (Compose-native) |
-| **Serialization** | kotlinx-serialization (JSON backup) |
-| **DataStore** | Preferences DataStore (user settings) |
-| **IDE** | Android Studio (Ladybug or later) |
+|Tool|Version / Notes|
+|---|---|
+|**Language**|Kotlin 2.0+|
+|**Min SDK**|API 26 (Android 8.0)|
+|**Target SDK**|API 35 (latest stable)|
+|**Build**|Gradle 8.x + KSP (for Room annotation processing)|
+|**DI**|Hilt 2.x|
+|**Database**|Room 2.6.x|
+|**UI**|Jetpack Compose (BOM 2024.12+) + Material 3|
+|**Charts**|Vico 2.x (Compose-native)|
+|**Serialization**|kotlinx-serialization (JSON backup)|
+|**DataStore**|Preferences DataStore (user settings)|
+|**IDE**|Android Studio (Ladybug or later)|
 
 ---
 
