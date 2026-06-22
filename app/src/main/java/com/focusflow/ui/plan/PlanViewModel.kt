@@ -1,9 +1,9 @@
 package com.focusflow.ui.plan
 
 import androidx.lifecycle.ViewModel
+import com.focusflow.data.db.dao.MilestoneDao
 import com.focusflow.data.repository.PlanRepository
 import com.focusflow.data.repository.TaskRepository
-import com.focusflow.data.db.MilestoneDao
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

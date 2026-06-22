@@ -1,13 +1,13 @@
 package com.focusflow.data.repository
 
-import androidx.datastore.preferences.DataStore
-import androidx.datastore.preferences.Preferences
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import com.focusflow.data.db.dao.DailyStatsDao
-import com.focusflow.data.db.entity.DailyStats
+import com.focusflow.util.toEpochMillis
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import javax.inject.Inject
 

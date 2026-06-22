@@ -2,11 +2,11 @@ package com.focusflow.ui.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.focusflow.data.db.dao.DailyStatsDao
 import com.focusflow.data.repository.SessionRepository
 import com.focusflow.data.repository.StatsRepository
 import com.focusflow.data.repository.StreakRepository
 import com.focusflow.data.repository.TaskRepository
-import com.focusflow.data.db.DailyStatsDao
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

@@ -5,14 +5,14 @@ import com.focusflow.data.db.entity.Mood
 import com.focusflow.data.db.entity.PlanStatus
 import com.focusflow.data.db.entity.Priority
 import com.focusflow.data.db.entity.TaskStatus
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
 
 object Converters {
-    private val gson = Gson()
-    private val stringListType = object : TypeToken<List<String>>() {}.type
-    private val intListType = object : TypeToken<List<Int>>() {}.type
-    private val longListType = object : TypeToken<List<Long>>() {}.type
+    private val json = Json { ignoreUnknownKeys = true }
+
+    // --- Enum converters ---
 
     @TypeConverter
     fun taskStatusToString(status: TaskStatus?): String? = status?.value
@@ -38,21 +38,29 @@ object Converters {
     @TypeConverter
     fun stringToMood(value: String?): Mood? = value?.let { Mood.fromValue(it) }
 
-    @TypeConverter
-    fun stringListToJson(list: List<String>?): String? = list?.let { gson.toJson(it) }
+    // --- List converters (kotlinx-serialization) ---
 
     @TypeConverter
-    fun jsonToStringList(json: String?): List<String>? = json?.let { gson.fromJson(it, stringListType) }
+    fun stringListToJson(list: List<String>?): String? =
+        list?.let { json.encodeToString(it) }
 
     @TypeConverter
-    fun intListToJson(list: List<Int>?): String? = list?.let { gson.toJson(it) }
+    fun jsonToStringList(jsonStr: String?): List<String>? =
+        jsonStr?.let { json.decodeFromString<List<String>>(it) }
 
     @TypeConverter
-    fun jsonToIntList(json: String?): List<Int>? = json?.let { gson.fromJson(it, intListType) }
+    fun intListToJson(list: List<Int>?): String? =
+        list?.let { json.encodeToString(it) }
 
     @TypeConverter
-    fun longListToJson(list: List<Long>?): String? = list?.let { gson.toJson(it) }
+    fun jsonToIntList(jsonStr: String?): List<Int>? =
+        jsonStr?.let { json.decodeFromString<List<Int>>(it) }
 
     @TypeConverter
-    fun jsonToLongList(json: String?): List<Long>? = json?.let { gson.fromJson(it, longListType) }
+    fun longListToJson(list: List<Long>?): String? =
+        list?.let { json.encodeToString(it) }
+
+    @TypeConverter
+    fun jsonToLongList(jsonStr: String?): List<Long>? =
+        jsonStr?.let { json.decodeFromString<List<Long>>(it) }
 }
