@@ -1,0 +1,5 @@
+<resources>
+    <style name="Theme.FocusFlow" parent="android:Theme.Material.NoActionBar">
+        <!-- Customize your dark theme here -->
+    </style>
+</resources>

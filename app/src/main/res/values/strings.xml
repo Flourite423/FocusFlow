@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">FocusFlow</string>
+    <string name="tab_dashboard">仪表盘</string>
+    <string name="tab_plan">计划</string>
+    <string name="tab_timer">计时</string>
+    <string name="tab_review">复习</string>
+    <string name="tab_settings">我的</string>
+</resources>
