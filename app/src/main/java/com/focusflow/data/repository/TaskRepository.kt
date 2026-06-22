@@ -5,6 +5,7 @@ import com.focusflow.data.db.dao.TaskDao
 import com.focusflow.data.db.entity.DayAssignment
 import com.focusflow.data.db.entity.Task
 import com.focusflow.data.db.entity.TaskStatus
+import com.focusflow.util.toEpochMillis
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 import java.util.UUID

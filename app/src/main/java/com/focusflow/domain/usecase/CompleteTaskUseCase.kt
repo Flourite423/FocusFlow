@@ -1,9 +1,10 @@
 package com.focusflow.domain.usecase
 
 import com.focusflow.data.db.dao.StudySessionDao
-import com.focusflow.data.repository.TaskRepository
 import com.focusflow.data.db.entity.TaskStatus
+import com.focusflow.data.repository.TaskRepository
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class CompleteTaskUseCase @Inject constructor(

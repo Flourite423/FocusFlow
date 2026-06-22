@@ -3,6 +3,7 @@ package com.focusflow.domain.usecase
 import com.focusflow.data.db.dao.DayAssignmentDao
 import com.focusflow.data.db.entity.Task
 import com.focusflow.data.repository.TaskRepository
+import com.focusflow.util.toEpochMillis
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 import javax.inject.Inject
