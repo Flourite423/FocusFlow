@@ -125,7 +125,7 @@ fun TimerScreen(
                         shape = CircleShape
                     ) {
                         Icon(
-                            if (uiState.isPaused) Icons.Default.PlayArrow else Icons.Default.Close,
+                            if (uiState.isPaused) Icons.Default.PlayArrow else Icons.Default.Refresh,
                             if (uiState.isPaused) "继续" else "暂停",
                             modifier = Modifier.size(32.dp)
                         )
