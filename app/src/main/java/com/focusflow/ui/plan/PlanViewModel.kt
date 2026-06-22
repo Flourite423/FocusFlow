@@ -64,13 +64,13 @@ class PlanViewModel @Inject constructor(
 
     fun activatePlan(planId: String) {
         viewModelScope.launch {
-            planRepository.updateStatus(planId, PlanStatus.ACTIVE)
+            planRepository.updateStatus(planId, PlanStatus.ACTIVE.value)
         }
     }
 
     fun archivePlan(planId: String) {
         viewModelScope.launch {
-            planRepository.updateStatus(planId, PlanStatus.ARCHIVED)
+            planRepository.updateStatus(planId, PlanStatus.ARCHIVED.value)
         }
     }
 }

@@ -87,7 +87,7 @@ fun PlanListScreen(
                 items(uiState.plans, key = { it.id }) { plan ->
                     PlanCard(
                         plan = plan,
-                        onClick = { navController.navigate(Screen.PlanDetail.createRoute(plan.id)) },
+                        onClick = { navController.navigate("plan/${plan.id}") },
                         onDelete = { viewModel.deletePlan(plan) }
                     )
                 }

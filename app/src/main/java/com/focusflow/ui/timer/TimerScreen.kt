@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Pause
+
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
@@ -125,7 +125,7 @@ fun TimerScreen(
                         shape = CircleShape
                     ) {
                         Icon(
-                            if (uiState.isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
+                            if (uiState.isPaused) Icons.Default.PlayArrow else Icons.Default.Close,
                             if (uiState.isPaused) "继续" else "暂停",
                             modifier = Modifier.size(32.dp)
                         )
