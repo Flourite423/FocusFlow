@@ -34,12 +34,24 @@ UI → Service（计时器绑定）
 Service → Data（写入 Session / 触发通知）
 ```
 
-UI 层通过 `ViewModel` 调用 `UseCase`，`UseCase` 调用 `Repository`，`Repository` 调用 `DAO`。ViewModel 持有 `StateFlow<UiState>`，Compose 通过 `collectAsState()` 订阅。
+UI 层通过 `ViewModel` 调用 `UseCase`，`UseCase` 调用 `Repository`，`Repository` 调用 `DAO`。ViewModel 持有 `StateFlow<UiState>`，Compose 通过 `collectAsStateWithLifecycle()` 订阅（生命周期感知，页面不可见时自动停止收集）。
 
 ### 1.3 核心依赖
 
 ```kotlin
+// build.gradle.kts (project)
+plugins {
+    id("com.google.dagger.hilt.android") version "2.51.1" apply false
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.0.21" apply false
+}
+
 // build.gradle.kts (app)
+plugins {
+    id("com.google.dagger.hilt.android")
+    id("org.jetbrains.kotlin.plugin.serialization")
+    id("com.google.devtools.ksp")
+}
+
 dependencies {
     // Compose
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
@@ -49,8 +61,13 @@ dependencies {
 
     // Room
     implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")  // coroutines support
-    ksp("androidx.room:room-compiler:2.6.1")         // KSP annotation processor
+    implementation("androidx.room:room-ktx:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")
+
+    // Hilt (dependency injection)
+    implementation("com.google.dagger:hilt-android:2.51.1")
+    ksp("com.google.dagger:hilt-android-compiler:2.51.1")
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     // Lifecycle + ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
@@ -58,6 +75,8 @@ dependencies {
 
     // WorkManager
     implementation("androidx.work:work-runtime-ktx:2.10.0")
+    implementation("androidx.hilt:hilt-work:1.2.0")
+    ksp("androidx.hilt:hilt-compiler:1.2.0")
 
     // DataStore (用户设置)
     implementation("androidx.datastore:datastore-preferences:1.1.1")
@@ -321,8 +340,6 @@ object Mood {
 
 ## 3. DAO 层（数据访问）
 
-Room DAO 使用 `Flow` 实现响应式查询，UI 层自动感知数据变化。
-
 ### 3.1 PlanDao
 
 ```kotlin
@@ -336,6 +353,9 @@ interface PlanDao {
 
     @Query("SELECT * FROM plans WHERE status = 'active' ORDER BY updatedAt DESC LIMIT 1")
     fun getActivePlan(): Flow<Plan?>
+
+    @Query("SELECT * FROM plans")
+    suspend fun getAllSync(): List<Plan>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(plan: Plan)
@@ -366,12 +386,17 @@ interface MilestoneDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(milestone: Milestone)
 
+    @Query("SELECT * FROM milestones")
+    suspend fun getAllSync(): List<Milestone>
+
     @Delete
     suspend fun delete(milestone: Milestone)
 }
 
-data class ProgressTuple(val total: Int, val completed: Int)
-```
+data class ProgressTuple(
+    @ColumnInfo(name = "total") val total: Int,
+    @ColumnInfo(name = "completed") val completed: Int
+)
 
 ### 3.3 TaskDao
 
@@ -383,6 +408,9 @@ interface TaskDao {
 
     @Query("SELECT * FROM tasks WHERE id = :id")
     suspend fun getById(id: String): Task?
+
+    @Query("SELECT * FROM tasks")
+    suspend fun getAllSync(): List<Task>
 
     @Query("""
         SELECT t.* FROM tasks t
@@ -409,6 +437,10 @@ interface TaskDao {
 
     @Query("SELECT COUNT(*) FROM tasks WHERE milestoneId = :milestoneId")
     fun getTotalCount(milestoneId: String): Flow<Int>
+
+    /** 检查前置依赖任务是否已完成（用于 UI 灰显） */
+    @Query("SELECT status FROM tasks WHERE id = :taskId")
+    fun getTaskStatus(taskId: String): Flow<String?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(task: Task)
@@ -446,6 +478,9 @@ interface DayAssignmentDao {
 
     @Query("DELETE FROM day_assignments WHERE id = :id")
     suspend fun delete(id: String)
+
+    @Query("SELECT * FROM day_assignments")
+    suspend fun getAllSync(): List<DayAssignment>
 }
 ```
 
@@ -481,6 +516,9 @@ interface StudySessionDao {
 
     @Query("UPDATE study_sessions SET endTime = :endTime, durationMinutes = :duration WHERE id = :id")
     suspend fun finish(id: String, endTime: Long, duration: Int)
+
+    @Query("SELECT * FROM study_sessions")
+    suspend fun getAllSync(): List<StudySession>
 }
 ```
 
@@ -498,12 +536,15 @@ interface ReviewScheduleDao {
 
     @Query("""
         SELECT * FROM review_schedules
-        WHERE nextReviewDate BETWEEN :weekStart AND :weekEnd AND status = 'active'
+        WHERE nextReviewDate BETWEEN :rangeStart AND :rangeEnd AND status = 'active'
     """)
-    fun getReviewsForWeek(weekStart: Long, weekEnd: Long): Flow<List<ReviewSchedule>>
+    fun getReviewsForRange(rangeStart: Long, rangeEnd: Long): Flow<List<ReviewSchedule>>
 
     @Query("SELECT COUNT(*) FROM review_schedules WHERE nextReviewDate <= :today AND status = 'active'")
     fun getDueReviewCount(today: Long): Flow<Int>
+
+    @Query("SELECT * FROM review_schedules")
+    suspend fun getAllSync(): List<ReviewSchedule>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(schedule: ReviewSchedule)
@@ -514,13 +555,6 @@ interface ReviewScheduleDao {
             nextReviewDate = :nextDate,
             lastReviewDate = :now,
             status = CASE WHEN currentRound + 1 >= totalRounds THEN 'completed' ELSE 'active' END,
-            updatedAt = :now
-        WHERE id = :id
-    """)
-    suspend fun markReviewed(id: String, nextDate: Long, now: Long = System.currentTimeMillis())
-}
-```
-
 ### 3.7 DailyStatsDao
 
 ```kotlin
@@ -529,14 +563,36 @@ interface DailyStatsDao {
     @Query("SELECT * FROM daily_stats WHERE date = :date")
     fun getByDate(date: Long): Flow<DailyStats?>
 
+    @Query("SELECT * FROM daily_stats WHERE date = :date")
+    suspend fun getByDateSync(date: Long): DailyStats?
+
     @Query("SELECT * FROM daily_stats WHERE date BETWEEN :from AND :to ORDER BY date ASC")
     fun getDateRange(from: Long, to: Long): Flow<List<DailyStats>>
 
     @Query("SELECT * FROM daily_stats ORDER BY date DESC LIMIT :limit")
     fun getRecent(limit: Int): Flow<List<DailyStats>>
 
+    @Query("SELECT * FROM daily_stats")
+    suspend fun getAllSync(): List<DailyStats>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(stats: DailyStats)
+}
+```
+
+### 3.8 ReviewLogDao
+
+```kotlin
+@Dao
+interface ReviewLogDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(log: ReviewLog)
+
+    @Query("SELECT * FROM review_logs WHERE scheduleId = :scheduleId ORDER BY reviewedAt DESC")
+    fun getByScheduleId(scheduleId: String): Flow<List<ReviewLog>>
+
+    @Query("SELECT * FROM review_logs")
+    suspend fun getAllSync(): List<ReviewLog>
 }
 ```
 
@@ -544,14 +600,13 @@ interface DailyStatsDao {
 
 ## 4. Repository 层
 
-每个模块一个 Repository，封装 DAO 调用 + 业务逻辑。
+Repository 仅封装 DAO 调用，不含跨表业务逻辑。跨表编排（如完成任务时汇总 Session 时长）由 Domain 层 UseCase 负责。
 
-### 4.1 TaskRepository（示例）
+### 4.1 TaskRepository
 
 ```kotlin
 class TaskRepository(
     private val taskDao: TaskDao,
-    private val sessionDao: StudySessionDao,
     private val assignmentDao: DayAssignmentDao
 ) {
     fun getTasksForDate(date: Long): Flow<List<Task>> =
@@ -560,12 +615,14 @@ class TaskRepository(
     fun getRecommendedTasks(): Flow<List<Task>> =
         taskDao.getTodayRecommended()
 
-    suspend fun completeTask(taskId: String) {
-        val now = System.currentTimeMillis()
-        taskDao.updateStatus(taskId, TaskStatus.DONE, now)
-        // 汇总实际时长
-        // ...session 查询求和后写回 task.actualMinutes
-    }
+    suspend fun getTaskById(id: String): Task? =
+        taskDao.getById(id)
+
+    suspend fun updateTaskStatus(id: String, status: String, completedAt: Long? = null) =
+        taskDao.updateStatus(id, status, completedAt)
+
+    suspend fun updateActualMinutes(id: String, minutes: Int) =
+        taskDao.updateActualMinutes(id, minutes)
 
     suspend fun assignTaskToDay(taskId: String, date: Long) {
         assignmentDao.upsert(DayAssignment(
@@ -577,7 +634,28 @@ class TaskRepository(
 }
 ```
 
-### 4.2 ReviewRepository
+### 4.2 CompleteTaskUseCase（示例）
+
+```kotlin
+/**
+ * 完成任务的业务编排：更新状态 + 汇总 Session 时长写回。
+ * ViewModel 调用此 UseCase，而非直接调用 Repository。
+ */
+class CompleteTaskUseCase(
+    private val taskRepository: TaskRepository,
+    private val sessionDao: StudySessionDao
+) {
+    suspend operator fun invoke(taskId: String) {
+        val now = System.currentTimeMillis()
+        taskRepository.updateTaskStatus(taskId, TaskStatus.DONE, now)
+        // 汇总该任务所有 Session 的实际时长
+        // val totalMinutes = sessionDao.getTotalMinutesForTask(taskId).first()
+        // taskRepository.updateActualMinutes(taskId, totalMinutes)
+    }
+}
+```
+
+### 4.3 ReviewRepository
 
 ```kotlin
 class ReviewRepository(
@@ -622,8 +700,7 @@ class ReviewRepository(
     }
 }
 ```
-
-### 4.3 StreakRepository
+### 4.4 StreakRepository
 
 ```kotlin
 class StreakRepository(
@@ -729,27 +806,6 @@ class TimerService : Service() {
             .setContentTitle("FocusFlow")
             .setContentText(text)
             .setSmallIcon(R.drawable.ic_timer)
-            .setOngoing(true)
-            .build()
-    }
-
-    inner class TimerBinder : Binder() {
-        fun getService(): TimerService = this@TimerService
-    }
-
-    override fun onBind(intent: Intent?): IBinder = binder
-
-    companion object {
-        const val ACTION_START = "com.focusflow.START"
-        const val ACTION_PAUSE = "com.focusflow.PAUSE"
-        const val ACTION_RESUME = "com.focusflow.RESUME"
-        const val ACTION_STOP = "com.focusflow.STOP"
-        const val CHANNEL_ID = "timer_channel"
-        const val NOTIFICATION_ID = 1
-    }
-}
-```
-
 ### 5.2 ReviewReminderWorker（WorkManager 定时任务）
 
 ```kotlin
@@ -761,7 +817,7 @@ class ReviewReminderWorker(
     override suspend fun doWork(): Result {
         val today = LocalDate.now().toEpochMillis()
         val db = FocusFlowDatabase.getInstance(applicationContext)
-        val dueCount = db.reviewScheduleDao().getDueCount(today)
+        val dueCount = db.reviewScheduleDao().getDueReviewCount(today).first()
 
         if (dueCount > 0) {
             sendNotification(
@@ -786,6 +842,16 @@ class ReviewReminderWorker(
     }
 
     companion object {
+        /** 计算距离目标提醒时间（默认 09:00）的毫秒延迟 */
+        private fun calculateDelayToTarget(targetHour: Int = 9): Long {
+            val now = LocalDateTime.now()
+            var target = now.toLocalDate().atTime(targetHour, 0)
+            if (now.isAfter(target)) {
+                target = target.plusDays(1)  // 明天的目标时间
+            }
+            return Duration.between(now, target).toMillis()
+        }
+
         fun schedule(context: Context) {
             val request = PeriodicWorkRequestBuilder<ReviewReminderWorker>(
                 1, TimeUnit.DAYS
@@ -916,6 +982,7 @@ class TimerViewModel @Inject constructor(
 ```kotlin
 sealed class Screen(val route: String) {
     data object Dashboard : Screen("dashboard")
+    data object DailyReview : Screen("daily_review")  // 每日回顾弹窗/页面
     data object PlanList : Screen("plan_list")
     data object PlanDetail : Screen("plan/{planId}") {
         fun createRoute(planId: String) = "plan/$planId"
@@ -955,6 +1022,7 @@ fun MainNavHost() {
     ) { padding ->
         NavHost(navController, Screen.Dashboard.route, Modifier.padding(padding)) {
             composable(Screen.Dashboard.route) { DashboardScreen() }
+            composable(Screen.DailyReview.route) { DailyReviewScreen() }
             composable(Screen.PlanList.route) { PlanListScreen() }
             composable(Screen.PlanDetail.route) { backStack ->
                 val planId = backStack.arguments?.getString("planId")!!
@@ -1062,25 +1130,31 @@ class BackupManager(private val db: FocusFlowDatabase) {
             plans = db.planDao().getAllSync(),
             milestones = db.milestoneDao().getAllSync(),
             tasks = db.taskDao().getAllSync(),
-            // ...其他表
+            dayAssignments = db.dayAssignmentDao().getAllSync(),
+            studySessions = db.studySessionDao().getAllSync(),
+            reviewSchedules = db.reviewScheduleDao().getAllSync(),
+            reviewLogs = db.reviewLogDao().getAllSync(),
+            dailyStats = db.dailyStatsDao().getAllSync()
         )
         val json = Json.encodeToString(data)
-        // 写入 Downloads 目录
         return writeToFile(context, "focusflow_backup_${dateStr}.json", json)
     }
 
     suspend fun importFromJson(context: Context, uri: Uri): Boolean {
         val json = context.contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: return false
         val data = Json.decodeFromString<BackupData>(json)
-        if (data.schemaVersion > CURRENT_VERSION) return false  // 不支持更高版本
+        if (data.schemaVersion > CURRENT_VERSION) return false
 
         db.withTransaction {
-            // 清空现有数据
             db.clearAllTables()
-            // 写入备份数据
             data.plans.forEach { db.planDao().upsert(it) }
             data.milestones.forEach { db.milestoneDao().upsert(it) }
-            // ...其他表
+            data.tasks.forEach { db.taskDao().upsert(it) }
+            data.dayAssignments.forEach { db.dayAssignmentDao().upsert(it) }
+            data.studySessions.forEach { db.studySessionDao().upsert(it) }
+            data.reviewSchedules.forEach { db.reviewScheduleDao().upsert(it) }
+            data.reviewLogs.forEach { db.reviewLogDao().upsert(it) }
+            data.dailyStats.forEach { db.dailyStatsDao().upsert(it) }
         }
         return true
     }

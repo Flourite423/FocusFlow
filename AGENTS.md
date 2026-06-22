@@ -26,7 +26,8 @@ Room DAO → SQLite
 
 - **UI layer**: Jetpack Compose screens observe `StateFlow<UiState>` from ViewModels
 - **ViewModel**: Holds `MutableStateFlow<UiState>`, launches coroutines in `viewModelScope`
-- **Repository**: Single source of truth, wraps DAO calls, contains business logic
+- **Repository**: Single source of truth, wraps DAO calls, data access only
+- **UseCase**: Cross-entity business logic orchestration (e.g., complete task + summarize sessions)
 - **DAO**: Room interfaces returning `Flow<T>` for reactive queries
 - **Service**: `TimerService` (Foreground Service for timer persistence), `ReviewReminderWorker` (WorkManager for scheduled notifications)
 
@@ -47,7 +48,7 @@ app/src/main/java/com/focusflow/
 │   │   ├── entity/      # Room @Entity classes (Plan, Task, StudySession, etc.)
 │   │   ├── dao/         # Room @Dao interfaces (Flow-based queries)
 │   │   └── converter/   # Room TypeConverters
-│   ├── repository/      # Repository classes (business logic + DAO delegation)
+│   ├── repository/      # Repository classes (DAO delegation, data access only)
 │   └── backup/          # JSON import/export (BackupManager)
 ├── domain/
 │   ├── model/           # Business models (optional, separate from Entity)
