@@ -1,32 +1,76 @@
 package com.focusflow.ui.plan
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.focusflow.data.db.dao.MilestoneDao
+import com.focusflow.data.db.entity.Milestone
+import com.focusflow.data.db.entity.Plan
+import com.focusflow.data.db.entity.PlanStatus
 import com.focusflow.data.repository.PlanRepository
-import com.focusflow.data.repository.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
 class PlanViewModel @Inject constructor(
     private val planRepository: PlanRepository,
-    private val taskRepository: TaskRepository,
     private val milestoneDao: MilestoneDao
 ) : ViewModel() {
 
     data class UiState(
-        val plans: List<com.focusflow.data.db.entity.Plan> = emptyList(),
-        val selectedPlan: com.focusflow.data.db.entity.Plan? = null,
-        val milestones: List<com.focusflow.data.db.entity.Milestone> = emptyList(),
-        val tasks: List<com.focusflow.data.db.entity.Task> = emptyList()
+        val plans: List<Plan> = emptyList(),
+        val isLoading: Boolean = true
     )
 
-    private val _uiState = MutableStateFlow(UiState())
-    val uiState = _uiState.asStateFlow()
+    private val _isLoading = MutableStateFlow(true)
+
+    val uiState: StateFlow<UiState> = combine(
+        planRepository.getAllPlans(),
+        _isLoading
+    ) { plans, loading ->
+        UiState(plans = plans, isLoading = loading)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState())
 
     init {
-        // TODO: Load plan data
+        _isLoading.value = false
+    }
+
+    fun createPlan(title: String, description: String, category: String, startDate: Long, endDate: Long) {
+        viewModelScope.launch {
+            val plan = Plan(
+                id = UUID.randomUUID().toString(),
+                title = title,
+                description = description,
+                category = category,
+                startDate = startDate,
+                endDate = endDate,
+                status = PlanStatus.ACTIVE
+            )
+            planRepository.upsert(plan)
+        }
+    }
+
+    fun deletePlan(plan: Plan) {
+        viewModelScope.launch {
+            planRepository.delete(plan)
+        }
+    }
+
+    fun activatePlan(planId: String) {
+        viewModelScope.launch {
+            planRepository.updateStatus(planId, PlanStatus.ACTIVE)
+        }
+    }
+
+    fun archivePlan(planId: String) {
+        viewModelScope.launch {
+            planRepository.updateStatus(planId, PlanStatus.ARCHIVED)
+        }
     }
 }
