@@ -1,38 +1,195 @@
 package com.focusflow.ui.dashboard
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
+import com.focusflow.data.db.entity.Task
+import com.focusflow.ui.components.FocusProgressBar
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DashboardScreen(
-    navController: androidx.navigation.NavController,
+    navController: NavController,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    Scaffold { padding ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Top stats row
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    StatCard(
+                        modifier = Modifier.weight(1f),
+                        icon = { Icon(Icons.Default.Favorite, null, tint = Color(0xFFEF4444)) },
+                        value = "${uiState.streakDays}",
+                        label = "连续天数"
+                    )
+                    StatCard(
+                        modifier = Modifier.weight(1f),
+                        icon = { Icon(Icons.Default.DateRange, null, tint = Color(0xFF3B82F6)) },
+                        value = "${uiState.todayMinutes}min",
+                        label = "今日学习"
+                    )
+                    StatCard(
+                        modifier = Modifier.weight(1f),
+                        icon = { Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF10B981)) },
+                        value = "${uiState.completedTasks}/${uiState.totalTasks}",
+                        label = "今日任务"
+                    )
+                }
+            }
+
+            // Today's tasks
+            item {
+                Text("今日任务", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            }
+            if (uiState.todayTasks.isEmpty()) {
+                item {
+                    Card(Modifier.fillMaxWidth()) {
+                        Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                            Text("暂无任务，去计划页面创建", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            } else {
+                items(uiState.todayTasks.size) { index ->
+                    val task = uiState.todayTasks[index]
+                    TaskRow(task = task)
+                }
+            }
+
+            // Heatmap placeholder
+            item {
+                Text("学习热力图", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            }
+            item {
+                HeatmapGrid(uiState.heatmapData)
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatCard(modifier: Modifier, icon: @Composable () -> Unit, value: String, label: String) {
+    Card(modifier = modifier, elevation = CardDefaults.cardElevation(2.dp)) {
         Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "Dashboard Screen",
-                fontSize = 24.sp,
-                textAlign = TextAlign.Center
+            icon()
+            Spacer(Modifier.height(4.dp))
+            Text(value, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun TaskRow(task: Task) {
+    Card(Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(1.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val isDone = task.status.value == "done"
+            Box(
+                modifier = Modifier.size(12.dp).clip(CircleShape).background(
+                    if (isDone) Color(0xFF10B981) else MaterialTheme.colorScheme.outline
+                )
             )
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(task.title, style = MaterialTheme.typography.bodyLarge, color = if (isDone) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
+                Text("预估 ${task.estimatedMinutes}min", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun HeatmapGrid(data: Map<Long, Int>) {
+    val today = LocalDate.now()
+    val startDate = today.minusWeeks(16)
+    val zone = ZoneId.systemDefault()
+
+    Card(Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(1.dp)) {
+        Column(Modifier.padding(12.dp)) {
+            Text("最近 16 周", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(8.dp))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                for (i in 0 until 16 * 7) {
+                    val date = startDate.plusDays(i.toLong())
+                    val epoch = date.atStartOfDay(zone).toInstant().toEpochMilli()
+                    val minutes = data[epoch] ?: 0
+                    val color = when {
+                        minutes == 0 -> Color(0xFFF1F5F9)
+                        minutes < 15 -> Color(0xFFBBF7D0)
+                        minutes < 30 -> Color(0xFF86EFAC)
+                        minutes < 60 -> Color(0xFF4ADE80)
+                        else -> Color(0xFF22C55E)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(color)
+                    )
+                }
+            }
         }
     }
 }
