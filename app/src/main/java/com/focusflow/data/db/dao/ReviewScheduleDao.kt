@@ -53,4 +53,7 @@ interface ReviewScheduleDao {
 
     @Query("SELECT * FROM review_schedules ORDER BY nextReviewDate ASC")
     suspend fun getAllSync(): List<ReviewSchedule>
+
+    @Query("SELECT COUNT(*) FROM review_schedules WHERE nextReviewDate <= :today AND status = 'active'")
+    suspend fun getDueReviewCountSync(today: Long): Int
 }
