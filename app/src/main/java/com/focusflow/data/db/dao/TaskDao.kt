@@ -5,7 +5,6 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Update
 import com.focusflow.data.db.entity.Task
 import kotlinx.coroutines.flow.Flow
 
@@ -24,7 +23,7 @@ interface TaskDao {
         SELECT t.* FROM tasks t
         INNER JOIN day_assignments da ON da.taskId = t.id
         WHERE da.date = :date
-        ORDER BY da."order" ASC, t.priority DESC
+        ORDER BY da.`order` ASC, t.priority DESC
     """)
     fun getTasksForDate(date: Long): Flow<List<Task>>
 
@@ -42,7 +41,8 @@ interface TaskDao {
                 WHEN 'medium' THEN 2
                 WHEN 'low' THEN 3
             END,
-            t.dueDate ASC NULLS LAST,
+            CASE WHEN t.dueDate IS NULL THEN 1 ELSE 0 END,
+            t.dueDate ASC,
             t.createdAt ASC
         LIMIT 10
     """)

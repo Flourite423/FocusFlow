@@ -1,7 +1,7 @@
 package com.focusflow.ui.settings
 
-import androidx.datastore.preferences.DataStore
-import androidx.datastore.preferences.Preferences
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
