@@ -46,7 +46,6 @@ android {
     buildFeatures {
         compose = true
     }
-
 }
 
 ksp {
@@ -77,7 +76,7 @@ dependencies {
 
     // Hilt (dependency injection)
     implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
+    ksp(libs.hilt.compiler)                         // com.google.dagger:hilt-compiler
     implementation(libs.hilt.navigation.compose)
 
     // Lifecycle + ViewModel
@@ -85,10 +84,10 @@ dependencies {
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.lifecycle.viewmodel.ktx)
 
-    // WorkManager
+    // WorkManager + Hilt
     implementation(libs.work.runtime.ktx)
     implementation(libs.hilt.work)
-    ksp(libs.hilt.work.compiler)
+    ksp(libs.hilt.androidx.compiler)                // androidx.hilt:hilt-compiler
 
     // DataStore (user settings)
     implementation(libs.datastore.preferences)
