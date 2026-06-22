@@ -73,7 +73,7 @@ class BackupManager(private val db: FocusFlowDatabase) {
                 put("id", s.id); put("taskId", s.taskId); put("startTime", s.startTime)
                 put("endTime", if (s.endTime != null) s.endTime else JSONObject.NULL)
                 put("durationMinutes", s.durationMinutes); put("note", s.note)
-                put("mood", if (s.mood != null) s.mood.value else JSONObject.NULL)
+                put("mood", if (s.mood != null) s.mood else JSONObject.NULL)
                 put("createdAt", s.createdAt)
             })
         }
