@@ -9,6 +9,7 @@ import com.focusflow.data.db.entity.Task
 import com.focusflow.data.db.entity.TaskStatus
 import com.focusflow.data.repository.PlanRepository
 import com.focusflow.data.repository.TaskRepository
+import com.focusflow.domain.model.MilestoneProgress
 import com.focusflow.domain.usecase.CompleteTaskUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,7 +36,7 @@ class PlanDetailViewModel @Inject constructor(
     data class UiState(
         val plan: Plan? = null,
         val milestones: List<Milestone> = emptyList(),
-        val progress: List<com.focusflow.data.db.dao.MilestoneDao.ProgressTuple> = emptyList(),
+        val progress: List<MilestoneProgress> = emptyList(),
         val tasksByMilestone: Map<String, List<Task>> = emptyMap()
     )
 
@@ -63,24 +64,14 @@ class PlanDetailViewModel @Inject constructor(
 
     fun addMilestone(planId: String, title: String, description: String) {
         viewModelScope.launch {
-            val milestone = Milestone(
-                id = UUID.randomUUID().toString(),
-                planId = planId,
-                title = title,
-                description = description
-            )
+            val milestone = Milestone(id = UUID.randomUUID().toString(), planId = planId, title = title, description = description)
             planRepository.upsertMilestone(milestone)
         }
     }
 
     fun addTask(milestoneId: String, title: String, description: String) {
         viewModelScope.launch {
-            val task = Task(
-                id = UUID.randomUUID().toString(),
-                milestoneId = milestoneId,
-                title = title,
-                description = description
-            )
+            val task = Task(id = UUID.randomUUID().toString(), milestoneId = milestoneId, title = title, description = description)
             planRepository.upsertTask(task)
         }
     }
@@ -93,20 +84,14 @@ class PlanDetailViewModel @Inject constructor(
     }
 
     fun completeTask(taskId: String) {
-        viewModelScope.launch {
-            completeTaskUseCase(taskId)
-        }
+        viewModelScope.launch { completeTaskUseCase(taskId) }
     }
 
     fun assignTaskToToday(taskId: String) {
-        viewModelScope.launch {
-            taskRepository.assignTaskToDay(taskId, com.focusflow.util.todayEpoch())
-        }
+        viewModelScope.launch { taskRepository.assignTaskToDay(taskId, com.focusflow.util.todayEpoch()) }
     }
 
     fun deleteTask(taskId: String) {
-        viewModelScope.launch {
-            planRepository.deleteTask(taskId)
-        }
+        viewModelScope.launch { planRepository.deleteTask(taskId) }
     }
 }

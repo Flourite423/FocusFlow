@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.focusflow.data.db.entity.Milestone
+import com.focusflow.domain.model.MilestoneProgress
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -25,7 +26,7 @@ interface MilestoneDao {
         GROUP BY m.id, m.title
         ORDER BY m."order" ASC
     """)
-    fun getPlanProgress(planId: String): Flow<List<ProgressTuple>>
+    fun getPlanProgress(planId: String): Flow<List<MilestoneProgress>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(milestone: Milestone)
@@ -42,12 +43,6 @@ interface MilestoneDao {
     @Query("DELETE FROM milestones WHERE id = :id")
     suspend fun deleteById(id: String)
 
-    data class ProgressTuple(
-        val milestoneId: String,
-        val milestoneTitle: String,
-        val totalTasks: Int,
-        val completedTasks: Int
-    )
     @Query("DELETE FROM milestones")
     suspend fun deleteAll()
 }
