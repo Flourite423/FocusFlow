@@ -48,6 +48,12 @@ android {
     buildFeatures {
         compose = true
     }
+
+    testOptions {
+        unitTests.all {
+            it.useJUnitPlatform()
+        }
+    }
 }
 
 ksp {
@@ -107,5 +113,6 @@ dependencies {
 
     // Unit tests
     testImplementation(libs.junit)
+    testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(libs.mockk)
 }
