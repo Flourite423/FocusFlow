@@ -2,7 +2,6 @@ package com.focusflow.ui.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.focusflow.data.db.dao.DailyStatsDao
 import com.focusflow.data.db.entity.Task
 import com.focusflow.data.repository.SessionRepository
 import com.focusflow.data.repository.StatsRepository
@@ -10,8 +9,8 @@ import com.focusflow.data.repository.StreakRepository
 import com.focusflow.data.repository.TaskRepository
 import com.focusflow.util.todayStart
 import com.focusflow.util.todayEnd
+import com.focusflow.util.todayEpoch
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -36,10 +35,11 @@ class DashboardViewModel @Inject constructor(
         val heatmapData: Map<Long, Int> = emptyMap()
     )
 
+    // Use tasks assigned to today (same as DailyPlan) for consistency
     val uiState: StateFlow<UiState> = combine(
         streakRepository.observeStreak(),
         sessionRepository.getTotalMinutesForDay(todayStart(), todayEnd()),
-        taskRepository.getRecommendedTasks(),
+        taskRepository.getTasksForDate(todayEpoch()),
         statsRepository.getHeatmapData(16)
     ) { streak, minutes, tasks, heatmap ->
         UiState(

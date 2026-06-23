@@ -8,6 +8,16 @@ import androidx.room.Query
 import com.focusflow.data.db.entity.DayAssignment
 import kotlinx.coroutines.flow.Flow
 
+data class AssignmentWithTitle(
+    val id: String,
+    val taskId: String,
+    val date: Long,
+    val order: Int,
+    val isTemporary: Boolean,
+    val createdAt: Long,
+    val taskTitle: String
+)
+
 @Dao
 interface DayAssignmentDao {
     @Query("SELECT * FROM day_assignments WHERE date = :date ORDER BY \"order\" ASC")
@@ -15,6 +25,15 @@ interface DayAssignmentDao {
 
     @Query("SELECT * FROM day_assignments WHERE date BETWEEN :startDate AND :endDate ORDER BY date ASC, \"order\" ASC")
     fun getByWeek(startDate: Long, endDate: Long): Flow<List<DayAssignment>>
+
+    @Query("""
+        SELECT da.id, da.taskId, da.date, da.`order`, da.isTemporary, da.createdAt, t.title as taskTitle
+        FROM day_assignments da
+        INNER JOIN tasks t ON t.id = da.taskId
+        WHERE da.date BETWEEN :weekStart AND :weekEnd
+        ORDER BY da.date ASC, da.`order` ASC
+    """)
+    fun getAssignmentsWithTitles(weekStart: Long, weekEnd: Long): Flow<List<AssignmentWithTitle>>
 
     @Query("SELECT COUNT(*) FROM day_assignments WHERE date = :date")
     fun getCountForDate(date: Long): Flow<Int>

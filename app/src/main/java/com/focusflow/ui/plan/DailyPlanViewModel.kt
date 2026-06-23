@@ -27,6 +27,7 @@ class DailyPlanViewModel @Inject constructor(
         val completedTasks: Int = 0
     )
 
+    // Use tasks assigned to today via DayAssignment
     val uiState: StateFlow<UiState> = taskRepository.getTasksForDate(todayEpoch()).map { tasks ->
         UiState(
             tasks = tasks,

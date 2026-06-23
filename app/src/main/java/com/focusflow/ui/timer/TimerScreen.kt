@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -28,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -214,5 +216,24 @@ fun TimerScreen(
                 }
             }
         }
+    }
+
+    // Complete task dialog after stopping timer
+    if (uiState.showCompleteDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissCompleteDialog() },
+            title = { Text("完成任务？") },
+            text = { Text("你刚刚学习了 ${uiState.lastStoppedMinutes} 分钟。是否将此任务标记为已完成？") },
+            confirmButton = {
+                TextButton(onClick = { viewModel.completeTask() }) {
+                    Text("标记完成")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissCompleteDialog() }) {
+                    Text("暂不")
+                }
+            }
+        )
     }
 }

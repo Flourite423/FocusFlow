@@ -8,9 +8,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -30,9 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,14 +71,16 @@ fun WeeklyPlanScreen(
                 }
             }
 
-            // Days of week
+            // Days of week with task names
             val days = listOf("周一", "周二", "周三", "周四", "周五", "周六", "周日")
             items(days.size) { index ->
-                val dayTasks = uiState.dayTasks[index] ?: emptyList()
+                val dayInfo = uiState.dayTasks[index]
+                val isToday = index == (calendar.get(Calendar.DAY_OF_WEEK) + 5) % 7
                 DayColumn(
                     dayName = days[index],
-                    taskCount = dayTasks.size,
-                    isToday = index == (calendar.get(Calendar.DAY_OF_WEEK) + 5) % 7
+                    taskCount = dayInfo?.taskCount ?: 0,
+                    taskTitles = dayInfo?.taskTitles ?: emptyList(),
+                    isToday = isToday
                 )
             }
         }
@@ -86,28 +88,61 @@ fun WeeklyPlanScreen(
 }
 
 @Composable
-private fun DayColumn(dayName: String, taskCount: Int, isToday: Boolean) {
+private fun DayColumn(dayName: String, taskCount: Int, taskTitles: List<String>, isToday: Boolean) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(if (isToday) 3.dp else 1.dp),
         colors = if (isToday) CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer) else CardDefaults.cardColors()
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                dayName,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                color = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(Modifier.weight(1f))
-            Text(
-                "$taskCount 个任务",
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        Column(Modifier.fillMaxWidth().padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    dayName,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                    color = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    "$taskCount 个任务",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Show task names
+            if (taskTitles.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                taskTitles.forEach { title ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(vertical = 2.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 8.dp),
+                            tint = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+                            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                        Text(
+                            title,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            } else {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "暂无任务",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
