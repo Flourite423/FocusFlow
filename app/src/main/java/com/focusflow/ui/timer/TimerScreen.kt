@@ -55,7 +55,6 @@ fun TimerScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedTask by remember { mutableStateOf<Task?>(null) }
 
-    // Tick every second when running and not paused
     LaunchedEffect(uiState.isRunning, uiState.isPaused) {
         while (uiState.isRunning && !uiState.isPaused) {
             delay(1000)
@@ -68,34 +67,23 @@ fun TimerScreen(
             modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Timer display
             val hours = uiState.elapsedSeconds / 3600
             val minutes = (uiState.elapsedSeconds % 3600) / 60
             val seconds = uiState.elapsedSeconds % 60
-            val timeStr = if (hours > 0) {
-                String.format("%d:%02d:%02d", hours, minutes, seconds)
-            } else {
-                String.format("%02d:%02d", minutes, seconds)
-            }
+            val timeStr = if (hours > 0) String.format("%d:%02d:%02d", hours, minutes, seconds)
+            else String.format("%02d:%02d", minutes, seconds)
 
             Spacer(Modifier.height(48.dp))
 
-            Text(
-                text = timeStr,
-                fontSize = 72.sp,
-                fontWeight = FontWeight.Light,
-                color = if (uiState.isRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-            )
+            Text(text = timeStr, fontSize = 72.sp, fontWeight = FontWeight.Light,
+                color = if (uiState.isRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
 
             Spacer(Modifier.height(8.dp))
 
             Text(
                 text = when {
                     uiState.isRunning && uiState.isPaused -> "已暂停"
-                    uiState.isRunning -> {
-                        val taskInfo = uiState.currentTaskTitle ?: "学习中"
-                        "$taskInfo..."
-                    }
+                    uiState.isRunning -> "${uiState.currentTaskTitle ?: "学习中"}..."
                     uiState.savedMinutes > 0 -> "已学习 ${uiState.savedMinutes} 分钟"
                     else -> "准备开始学习"
                 },
@@ -105,13 +93,8 @@ fun TimerScreen(
 
             Spacer(Modifier.height(48.dp))
 
-            // Task selector (only when not running)
             if (!uiState.isRunning) {
-                Text(
-                    "选择任务（可选）",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text("选择任务（可选）", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(8.dp))
 
                 if (uiState.availableTasks.isEmpty()) {
@@ -121,29 +104,16 @@ fun TimerScreen(
                         }
                     }
                 } else {
-                    LazyColumn(
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
+                    LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         itemsIndexed(uiState.availableTasks) { _, task ->
                             val isSelected = selectedTask?.id == task.id
                             Card(
-                                modifier = Modifier.fillMaxWidth().clickable {
-                                    selectedTask = if (isSelected) null else task
-                                },
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                                    else MaterialTheme.colorScheme.surface
-                                ),
+                                modifier = Modifier.fillMaxWidth().clickable { selectedTask = if (isSelected) null else task },
+                                colors = CardDefaults.cardColors(containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface),
                                 elevation = CardDefaults.cardElevation(if (isSelected) 2.dp else 0.dp)
                             ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    if (isSelected) {
-                                        Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                                    }
+                                Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    if (isSelected) { Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp)) }
                                     Spacer(Modifier.width(8.dp))
                                     Column(Modifier.weight(1f)) {
                                         Text(task.title, style = MaterialTheme.typography.bodyMedium)
@@ -157,37 +127,20 @@ fun TimerScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                // Start button
-                Button(
-                    onClick = { viewModel.startTimer(selectedTask?.id, selectedTask?.title) },
-                    modifier = Modifier.size(80.dp),
-                    shape = CircleShape
-                ) {
+                Button(onClick = { viewModel.startTimer(selectedTask?.id, selectedTask?.title) }, modifier = Modifier.size(80.dp), shape = CircleShape) {
                     Icon(Icons.Default.PlayArrow, "开始", modifier = Modifier.size(36.dp))
                 }
             } else {
-                // Controls when running
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(24.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Stop button
-                    OutlinedButton(
-                        onClick = { viewModel.stopTimer() },
-                        modifier = Modifier.size(56.dp),
-                        shape = CircleShape
-                    ) {
-                        Icon(Icons.Default.Refresh, "结束", modifier = Modifier.size(24.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // Stop button — uses CheckCircle to differentiate from pause
+                    OutlinedButton(onClick = { viewModel.stopTimer() }, modifier = Modifier.size(56.dp), shape = CircleShape) {
+                        Icon(Icons.Default.CheckCircle, "结束", modifier = Modifier.size(24.dp))
                     }
 
-                    // Pause/Resume button
+                    // Pause/Resume button — uses Refresh for pause, PlayArrow for resume
                     FilledTonalButton(
-                        onClick = {
-                            if (uiState.isPaused) viewModel.resumeTimer()
-                            else viewModel.pauseTimer()
-                        },
-                        modifier = Modifier.size(72.dp),
-                        shape = CircleShape
+                        onClick = { if (uiState.isPaused) viewModel.resumeTimer() else viewModel.pauseTimer() },
+                        modifier = Modifier.size(72.dp), shape = CircleShape
                     ) {
                         Icon(
                             if (uiState.isPaused) Icons.Default.PlayArrow else Icons.Default.Refresh,
@@ -200,16 +153,9 @@ fun TimerScreen(
 
             Spacer(Modifier.height(32.dp))
 
-            // Today summary
             if (uiState.savedMinutes > 0) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(1.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
+                Card(Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(1.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("今日累计", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("${uiState.savedMinutes} 分钟", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     }
@@ -218,22 +164,13 @@ fun TimerScreen(
         }
     }
 
-    // Complete task dialog after stopping timer
     if (uiState.showCompleteDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissCompleteDialog() },
             title = { Text("完成任务？") },
             text = { Text("你刚刚学习了 ${uiState.lastStoppedMinutes} 分钟。是否将此任务标记为已完成？") },
-            confirmButton = {
-                TextButton(onClick = { viewModel.completeTask() }) {
-                    Text("标记完成")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.dismissCompleteDialog() }) {
-                    Text("暂不")
-                }
-            }
+            confirmButton = { TextButton(onClick = { viewModel.completeTask() }) { Text("标记完成") } },
+            dismissButton = { TextButton(onClick = { viewModel.dismissCompleteDialog() }) { Text("暂不") } }
         )
     }
 }

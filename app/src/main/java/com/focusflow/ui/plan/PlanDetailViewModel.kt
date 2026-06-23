@@ -3,8 +3,6 @@ package com.focusflow.ui.plan
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.focusflow.data.db.dao.MilestoneDao
-import com.focusflow.data.db.dao.TaskDao
 import com.focusflow.data.db.entity.Milestone
 import com.focusflow.data.db.entity.Plan
 import com.focusflow.data.db.entity.Task
@@ -12,7 +10,6 @@ import com.focusflow.data.db.entity.TaskStatus
 import com.focusflow.data.repository.PlanRepository
 import com.focusflow.data.repository.TaskRepository
 import com.focusflow.domain.usecase.CompleteTaskUseCase
-import com.focusflow.util.todayEpoch
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -29,8 +26,6 @@ import javax.inject.Inject
 class PlanDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val planRepository: PlanRepository,
-    private val milestoneDao: MilestoneDao,
-    private val taskDao: TaskDao,
     private val taskRepository: TaskRepository,
     private val completeTaskUseCase: CompleteTaskUseCase
 ) : ViewModel() {
@@ -40,18 +35,18 @@ class PlanDetailViewModel @Inject constructor(
     data class UiState(
         val plan: Plan? = null,
         val milestones: List<Milestone> = emptyList(),
-        val progress: List<MilestoneDao.ProgressTuple> = emptyList(),
+        val progress: List<com.focusflow.data.db.dao.MilestoneDao.ProgressTuple> = emptyList(),
         val tasksByMilestone: Map<String, List<Task>> = emptyMap()
     )
 
-    private val milestonesFlow = milestoneDao.getByPlanId(planId)
+    private val milestonesFlow = planRepository.getMilestonesByPlanId(planId)
 
     private val tasksFlow = milestonesFlow.flatMapLatest { milestones ->
         if (milestones.isEmpty()) {
             MutableStateFlow(emptyMap())
         } else {
             val flows = milestones.map { ms ->
-                taskDao.getByMilestoneId(ms.id).map { tasks -> ms.id to tasks }
+                planRepository.getTasksByMilestoneId(ms.id).map { tasks -> ms.id to tasks }
             }
             combine(flows) { pairs -> pairs.toMap() }
         }
@@ -60,7 +55,7 @@ class PlanDetailViewModel @Inject constructor(
     val uiState: StateFlow<UiState> = combine(
         planRepository.getPlanById(planId),
         milestonesFlow,
-        milestoneDao.getPlanProgress(planId),
+        planRepository.getPlanProgress(planId),
         tasksFlow
     ) { plan, milestones, progress, tasksByMilestone ->
         UiState(plan = plan, milestones = milestones, progress = progress, tasksByMilestone = tasksByMilestone)
@@ -74,7 +69,7 @@ class PlanDetailViewModel @Inject constructor(
                 title = title,
                 description = description
             )
-            milestoneDao.upsert(milestone)
+            planRepository.upsertMilestone(milestone)
         }
     }
 
@@ -86,33 +81,32 @@ class PlanDetailViewModel @Inject constructor(
                 title = title,
                 description = description
             )
-            taskDao.upsert(task)
+            planRepository.upsertTask(task)
         }
     }
 
     fun toggleTaskStatus(task: Task) {
         viewModelScope.launch {
-            if (task.status == TaskStatus.DONE) {
-                // Mark as TODO again
-                val now = System.currentTimeMillis()
-                taskDao.updateStatus(task.id, TaskStatus.TODO.value, now)
-                taskDao.updateCompletedAt(task.id, 0L, now)
-            } else {
-                // Mark as DONE with full completion flow
-                completeTaskUseCase(task.id)
-            }
+            val newStatus = if (task.status == TaskStatus.DONE) TaskStatus.TODO else TaskStatus.DONE
+            taskRepository.updateTaskStatus(task.id, newStatus, System.currentTimeMillis())
+        }
+    }
+
+    fun completeTask(taskId: String) {
+        viewModelScope.launch {
+            completeTaskUseCase(taskId)
         }
     }
 
     fun assignTaskToToday(taskId: String) {
         viewModelScope.launch {
-            taskRepository.assignTaskToDay(taskId, todayEpoch())
+            taskRepository.assignTaskToDay(taskId, com.focusflow.util.todayEpoch())
         }
     }
 
     fun deleteTask(taskId: String) {
         viewModelScope.launch {
-            taskDao.deleteById(taskId)
+            planRepository.deleteTask(taskId)
         }
     }
 }

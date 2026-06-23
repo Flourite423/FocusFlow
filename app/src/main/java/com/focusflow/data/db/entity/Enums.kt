@@ -7,7 +7,8 @@ enum class TaskStatus(val value: String) {
     SKIPPED("skipped");
 
     companion object {
-        fun fromValue(value: String): TaskStatus = values().first { it.value == value }
+        fun fromValue(value: String): TaskStatus =
+            values().firstOrNull { it.value == value } ?: TODO
     }
 }
 
@@ -18,7 +19,8 @@ enum class Priority(val value: String) {
     URGENT("urgent");
 
     companion object {
-        fun fromValue(value: String): Priority = values().first { it.value == value }
+        fun fromValue(value: String): Priority =
+            values().firstOrNull { it.value == value } ?: MEDIUM
     }
 }
 
@@ -29,7 +31,8 @@ enum class PlanStatus(val value: String) {
     ARCHIVED("archived");
 
     companion object {
-        fun fromValue(value: String): PlanStatus = values().first { it.value == value }
+        fun fromValue(value: String): PlanStatus =
+            values().firstOrNull { it.value == value } ?: DRAFT
     }
 }
 
@@ -40,6 +43,7 @@ enum class Mood(val value: String) {
     EXHAUSTED("exhausted");
 
     companion object {
-        fun fromValue(value: String): Mood = values().first { it.value == value }
+        fun fromValue(value: String): Mood =
+            values().firstOrNull { it.value == value } ?: NORMAL
     }
 }

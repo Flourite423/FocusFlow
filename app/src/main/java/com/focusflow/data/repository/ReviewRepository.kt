@@ -2,6 +2,7 @@ package com.focusflow.data.repository
 
 import com.focusflow.data.db.dao.ReviewLogDao
 import com.focusflow.data.db.dao.ReviewScheduleDao
+import com.focusflow.data.db.dao.TaskDao
 import com.focusflow.data.db.entity.ReviewLog
 import com.focusflow.data.db.entity.ReviewSchedule
 import com.focusflow.util.toEpochMillis
@@ -12,7 +13,8 @@ import javax.inject.Inject
 
 class ReviewRepository @Inject constructor(
     private val scheduleDao: ReviewScheduleDao,
-    private val reviewLogDao: ReviewLogDao
+    private val reviewLogDao: ReviewLogDao,
+    private val taskDao: TaskDao
 ) {
     fun getDueReviews(): Flow<List<ReviewSchedule>> {
         return scheduleDao.getDueReviews(LocalDate.now().toEpochMillis())
@@ -23,6 +25,10 @@ class ReviewRepository @Inject constructor(
 
     fun getDueReviewCount(): Flow<Int> {
         return scheduleDao.getDueReviewCount(LocalDate.now().toEpochMillis())
+    }
+
+    suspend fun getTaskTitle(taskId: String): String {
+        return taskDao.getById(taskId)?.title ?: taskId.take(8)
     }
 
     suspend fun createSchedule(taskId: String, intervals: List<Int> = listOf(1, 3, 7, 14, 30)) {

@@ -22,8 +22,16 @@ class TaskRepository @Inject constructor(
 
     suspend fun getTaskById(id: String): Task? = taskDao.getById(id)
 
-    suspend fun updateTaskStatus(id: String, status: TaskStatus, completedAt: Long? = null) =
-        taskDao.updateStatus(id, status.value, System.currentTimeMillis())
+    suspend fun updateTaskStatus(id: String, status: TaskStatus, completedAt: Long? = null) {
+        val now = System.currentTimeMillis()
+        taskDao.updateStatus(id, status.value, now)
+        if (status == TaskStatus.DONE && completedAt != null) {
+            taskDao.updateCompletedAt(id, completedAt, now)
+        } else if (status == TaskStatus.TODO) {
+            // Clear completedAt when un-completing
+            taskDao.updateCompletedAt(id, 0L, now)
+        }
+    }
 
     suspend fun updateActualMinutes(id: String, minutes: Int) =
         taskDao.updateActualMinutes(id, minutes, System.currentTimeMillis())

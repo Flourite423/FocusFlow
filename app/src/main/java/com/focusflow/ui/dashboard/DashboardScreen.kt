@@ -27,7 +27,6 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -52,6 +51,7 @@ import androidx.navigation.NavController
 import com.focusflow.data.db.entity.Task
 import com.focusflow.navigation.Screen
 import com.focusflow.ui.components.OnboardingGuide
+import com.focusflow.ui.theme.FocusFlowColors
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -64,6 +64,7 @@ fun DashboardScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showOnboarding by remember { mutableStateOf(false) }
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val greeting = remember {
         val hour = LocalTime.now().hour
         when {
@@ -97,72 +98,29 @@ fun DashboardScreen(
         ) {
             // Greeting
             item {
-                Text(
-                    greeting,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    "今天也要加油学习哦",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text(greeting, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text("今天也要加油学习哦", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
-            // Top stats row
+            // Stats row
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    StatCard(
-                        modifier = Modifier.weight(1f),
-                        icon = { Icon(Icons.Default.Favorite, null, tint = Color(0xFFEF4444)) },
-                        value = "${uiState.streakDays}",
-                        label = "连续天数"
-                    )
-                    StatCard(
-                        modifier = Modifier.weight(1f),
-                        icon = { Icon(Icons.Default.DateRange, null, tint = Color(0xFF3B82F6)) },
-                        value = "${uiState.todayMinutes}min",
-                        label = "今日学习"
-                    )
-                    StatCard(
-                        modifier = Modifier.weight(1f),
-                        icon = { Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF10B981)) },
-                        value = "${uiState.completedTasks}/${uiState.totalTasks}",
-                        label = "今日任务"
-                    )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    StatCard(Modifier.weight(1f), { Icon(Icons.Default.Favorite, null, tint = FocusFlowColors.streakColor) }, "${uiState.streakDays}", "连续天数")
+                    StatCard(Modifier.weight(1f), { Icon(Icons.Default.DateRange, null, tint = FocusFlowColors.planColor) }, "${uiState.todayMinutes}min", "今日学习")
+                    StatCard(Modifier.weight(1f), { Icon(Icons.Default.CheckCircle, null, tint = FocusFlowColors.timerColor) }, "${uiState.completedTasks}/${uiState.totalTasks}", "今日任务")
                 }
             }
 
             // Quick actions
             item {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    QuickActionCard(
-                        modifier = Modifier.weight(1f),
-                        icon = { Icon(Icons.Default.Star, null, tint = Color(0xFFF59E0B)) },
-                        title = "今日计划",
-                        subtitle = "查看今天的任务",
-                        onClick = { navController.navigate(Screen.DailyPlan.createRoute()) }
-                    )
-                    QuickActionCard(
-                        modifier = Modifier.weight(1f),
-                        icon = { Icon(Icons.Default.DateRange, null, tint = Color(0xFF8B5CF6)) },
-                        title = "周计划",
-                        subtitle = "查看本周安排",
-                        onClick = { navController.navigate(Screen.WeeklyPlan.createRoute()) }
-                    )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    QuickActionCard(Modifier.weight(1f), { Icon(Icons.Default.Star, null, tint = FocusFlowColors.streakColor) }, "今日计划", "查看今天的任务") { navController.navigate(Screen.DailyPlan.createRoute()) }
+                    QuickActionCard(Modifier.weight(1f), { Icon(Icons.Default.DateRange, null, tint = FocusFlowColors.reviewColor) }, "周计划", "查看本周安排") { navController.navigate(Screen.WeeklyPlan.createRoute()) }
                 }
             }
 
             // Today's tasks
-            item {
-                Text("今日任务", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            }
+            item { Text("今日任务", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
             if (uiState.todayTasks.isEmpty()) {
                 item {
                     Card(Modifier.fillMaxWidth()) {
@@ -172,37 +130,23 @@ fun DashboardScreen(
                     }
                 }
             } else {
-                items(uiState.todayTasks.size) { index ->
-                    val task = uiState.todayTasks[index]
-                    TaskRow(task = task)
-                }
+                items(uiState.todayTasks.size) { index -> TaskRow(uiState.todayTasks[index]) }
             }
 
             // Heatmap
-            item {
-                Text("学习热力图", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            }
-            item {
-                HeatmapGrid(uiState.heatmapData)
-            }
+            item { Text("学习热力图", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
+            item { HeatmapGrid(uiState.heatmapData, isDark) }
         }
     }
 
-    // Onboarding overlay
-    if (showOnboarding) {
-        OnboardingGuide(onDismiss = { showOnboarding = false })
-    }
+    if (showOnboarding) { OnboardingGuide(onDismiss = { showOnboarding = false }) }
 }
 
 @Composable
 private fun StatCard(modifier: Modifier, icon: @Composable () -> Unit, value: String, label: String) {
     Card(modifier = modifier, elevation = CardDefaults.cardElevation(2.dp)) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            icon()
-            Spacer(Modifier.height(4.dp))
+        Column(Modifier.fillMaxWidth().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            icon(); Spacer(Modifier.height(4.dp))
             Text(value, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Text(label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -210,23 +154,10 @@ private fun StatCard(modifier: Modifier, icon: @Composable () -> Unit, value: St
 }
 
 @Composable
-private fun QuickActionCard(
-    modifier: Modifier,
-    icon: @Composable () -> Unit,
-    title: String,
-    subtitle: String,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = modifier.clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(1.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            icon()
-            Spacer(Modifier.width(8.dp))
+private fun QuickActionCard(modifier: Modifier, icon: @Composable () -> Unit, title: String, subtitle: String, onClick: () -> Unit) {
+    Card(modifier = modifier.clickable(onClick = onClick), elevation = CardDefaults.cardElevation(1.dp)) {
+        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            icon(); Spacer(Modifier.width(8.dp))
             Column {
                 Text(title, style = MaterialTheme.typography.titleSmall)
                 Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -238,16 +169,9 @@ private fun QuickActionCard(
 @Composable
 private fun TaskRow(task: Task) {
     Card(Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(1.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             val isDone = task.status.value == "done"
-            Box(
-                modifier = Modifier.size(12.dp).clip(CircleShape).background(
-                    if (isDone) Color(0xFF10B981) else MaterialTheme.colorScheme.outline
-                )
-            )
+            Box(Modifier.size(12.dp).clip(CircleShape).background(if (isDone) FocusFlowColors.timerColor else MaterialTheme.colorScheme.outline))
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(task.title, style = MaterialTheme.typography.bodyLarge, color = if (isDone) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
@@ -259,7 +183,7 @@ private fun TaskRow(task: Task) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun HeatmapGrid(data: Map<Long, Int>) {
+private fun HeatmapGrid(data: Map<Long, Int>, isDark: Boolean) {
     val today = LocalDate.now()
     val startDate = today.minusWeeks(16)
     val zone = ZoneId.systemDefault()
@@ -268,29 +192,34 @@ private fun HeatmapGrid(data: Map<Long, Int>) {
         Column(Modifier.padding(12.dp)) {
             Text("最近 16 周", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(8.dp))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 for (i in 0 until 16 * 7) {
                     val date = startDate.plusDays(i.toLong())
                     val epoch = date.atStartOfDay(zone).toInstant().toEpochMilli()
                     val minutes = data[epoch] ?: 0
-                    val color = when {
-                        minutes == 0 -> Color(0xFFF1F5F9)
-                        minutes < 15 -> Color(0xFFBBF7D0)
-                        minutes < 30 -> Color(0xFF86EFAC)
-                        minutes < 60 -> Color(0xFF4ADE80)
-                        else -> Color(0xFF22C55E)
+                    val color = if (isDark) {
+                        when {
+                            minutes == 0 -> FocusFlowColors.heatmapEmptyDark
+                            minutes < 15 -> FocusFlowColors.heatmapLowDark
+                            minutes < 30 -> FocusFlowColors.heatmapMediumDark
+                            minutes < 60 -> FocusFlowColors.heatmapHighDark
+                            else -> FocusFlowColors.heatmapMaxDark
+                        }
+                    } else {
+                        when {
+                            minutes == 0 -> FocusFlowColors.heatmapEmpty
+                            minutes < 15 -> FocusFlowColors.heatmapLow
+                            minutes < 30 -> FocusFlowColors.heatmapMedium
+                            minutes < 60 -> FocusFlowColors.heatmapHigh
+                            else -> FocusFlowColors.heatmapMax
+                        }
                     }
-                    Box(
-                        modifier = Modifier
-                            .size(12.dp)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(color)
-                    )
+                    Box(Modifier.size(12.dp).clip(RoundedCornerShape(2.dp)).background(color))
                 }
             }
         }
     }
 }
+
+// Extension to check if color is dark
+private fun Color.luminance(): Float = (0.299f * red + 0.587f * green + 0.114f * blue)

@@ -21,10 +21,7 @@ import com.focusflow.data.repository.SessionRepository
 import com.focusflow.data.repository.StatsRepository
 import com.focusflow.data.repository.StreakRepository
 import com.focusflow.data.repository.TaskRepository
-import com.focusflow.domain.usecase.CalculateStreakUseCase
 import com.focusflow.domain.usecase.CompleteTaskUseCase
-import com.focusflow.domain.usecase.GetReviewScheduleUseCase
-import com.focusflow.domain.usecase.GetTodayTasksUseCase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -86,7 +83,8 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun providePlanRepository(dao: PlanDao): PlanRepository = PlanRepository(dao)
+    fun providePlanRepository(planDao: PlanDao, milestoneDao: MilestoneDao, taskDao: TaskDao): PlanRepository =
+        PlanRepository(planDao, milestoneDao, taskDao)
 
     @Provides
     @Singleton
@@ -100,8 +98,8 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideReviewRepository(scheduleDao: ReviewScheduleDao, logDao: ReviewLogDao): ReviewRepository =
-        ReviewRepository(scheduleDao, logDao)
+    fun provideReviewRepository(scheduleDao: ReviewScheduleDao, logDao: ReviewLogDao, taskDao: TaskDao): ReviewRepository =
+        ReviewRepository(scheduleDao, logDao, taskDao)
 
     @Provides
     @Singleton
@@ -117,18 +115,6 @@ object AppModule {
     fun provideBackupManager(db: FocusFlowDatabase): BackupManager = BackupManager(db)
 
     @Provides
-    fun provideGetTodayTasksUseCase(repo: TaskRepository, assignmentDao: DayAssignmentDao): GetTodayTasksUseCase =
-        GetTodayTasksUseCase(repo, assignmentDao)
-
-    @Provides
-    fun provideCompleteTaskUseCase(repo: TaskRepository, sessionDao: StudySessionDao, reviewRepo: ReviewRepository): CompleteTaskUseCase =
-        CompleteTaskUseCase(repo, sessionDao, reviewRepo)
-
-    @Provides
-    fun provideCalculateStreakUseCase(repo: StreakRepository): CalculateStreakUseCase =
-        CalculateStreakUseCase(repo)
-
-    @Provides
-    fun provideGetReviewScheduleUseCase(repo: ReviewRepository): GetReviewScheduleUseCase =
-        GetReviewScheduleUseCase(repo)
+    fun provideCompleteTaskUseCase(taskRepo: TaskRepository, sessionRepo: SessionRepository, reviewRepo: ReviewRepository): CompleteTaskUseCase =
+        CompleteTaskUseCase(taskRepo, sessionRepo, reviewRepo)
 }

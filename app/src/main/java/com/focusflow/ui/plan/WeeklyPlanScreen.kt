@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -32,7 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import java.util.Calendar
+import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,7 +40,8 @@ fun WeeklyPlanScreen(
     viewModel: WeeklyPlanViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val calendar = remember { Calendar.getInstance() }
+    // Use LocalDate.now() directly — updates across midnight unlike Calendar.getInstance() in remember{}
+    val todayDayOfWeek = remember(LocalDate.now()) { LocalDate.now().dayOfWeek.value } // 1=Mon, 7=Sun
 
     Scaffold(
         topBar = {
@@ -56,32 +56,21 @@ fun WeeklyPlanScreen(
             contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Week summary
             item {
                 Card(Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(2.dp)) {
                     Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("本周概览", style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(4.dp))
-                        Text(
-                            "已分配 ${uiState.totalAssigned} 个任务",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Text("已分配 ${uiState.totalAssigned} 个任务", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
 
-            // Days of week with task names
             val days = listOf("周一", "周二", "周三", "周四", "周五", "周六", "周日")
             items(days.size) { index ->
                 val dayInfo = uiState.dayTasks[index]
-                val isToday = index == (calendar.get(Calendar.DAY_OF_WEEK) + 5) % 7
-                DayColumn(
-                    dayName = days[index],
-                    taskCount = dayInfo?.taskCount ?: 0,
-                    taskTitles = dayInfo?.taskTitles ?: emptyList(),
-                    isToday = isToday
-                )
+                val isToday = index == todayDayOfWeek - 1 // 0-indexed: Mon=0, Sun=6
+                DayColumn(dayName = days[index], taskCount = dayInfo?.taskCount ?: 0, taskTitles = dayInfo?.taskTitles ?: emptyList(), isToday = isToday)
             }
         }
     }
@@ -95,53 +84,28 @@ private fun DayColumn(dayName: String, taskCount: Int, taskTitles: List<String>,
         colors = if (isToday) CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer) else CardDefaults.cardColors()
     ) {
         Column(Modifier.fillMaxWidth().padding(16.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    dayName,
-                    style = MaterialTheme.typography.titleSmall,
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(dayName, style = MaterialTheme.typography.titleSmall,
                     fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-                )
+                    color = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.weight(1f))
-                Text(
-                    "$taskCount 个任务",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text("$taskCount 个任务", style = MaterialTheme.typography.bodyMedium,
+                    color = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant)
             }
-
-            // Show task names
             if (taskTitles.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 taskTitles.forEach { title ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(vertical = 2.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            modifier = Modifier.padding(end = 8.dp),
-                            tint = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
-                            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                        )
-                        Text(
-                            title,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
+                        Icon(Icons.Default.CheckCircle, null, modifier = Modifier.padding(end = 8.dp),
+                            tint = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                        Text(title, style = MaterialTheme.typography.bodySmall,
+                            color = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface)
                     }
                 }
             } else {
                 Spacer(Modifier.height(4.dp))
-                Text(
-                    "暂无任务",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
-                    else MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text("暂无任务", style = MaterialTheme.typography.bodySmall,
+                    color = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

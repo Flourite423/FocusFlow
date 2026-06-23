@@ -7,6 +7,7 @@ import com.focusflow.data.db.entity.*
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader
+import java.io.IOException
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -17,7 +18,7 @@ class BackupManager(private val db: FocusFlowDatabase) {
         root.put("schemaVersion", 1)
         root.put("exportedAt", System.currentTimeMillis())
 
-        // Plans (status is PlanStatus enum -> use .value)
+        // Plans
         val plansJson = JSONArray()
         for (p in db.planDao().getAllSync()) {
             plansJson.put(JSONObject().apply {
@@ -29,7 +30,7 @@ class BackupManager(private val db: FocusFlowDatabase) {
         }
         root.put("plans", plansJson)
 
-        // Milestones (status is String)
+        // Milestones
         val msJson = JSONArray()
         for (p2 in db.planDao().getAllSync()) for (m in db.milestoneDao().getAllSync(p2.id)) {
             msJson.put(JSONObject().apply {
@@ -42,7 +43,7 @@ class BackupManager(private val db: FocusFlowDatabase) {
         }
         root.put("milestones", msJson)
 
-        // Tasks (status is TaskStatus enum, priority is Priority enum)
+        // Tasks
         val tasksJson = JSONArray()
         for (t in db.taskDao().getAllSync()) {
             tasksJson.put(JSONObject().apply {
@@ -68,7 +69,7 @@ class BackupManager(private val db: FocusFlowDatabase) {
         }
         root.put("dayAssignments", daJson)
 
-        // StudySessions (mood is String? not enum)
+        // StudySessions
         val ssJson = JSONArray()
         for (s in db.studySessionDao().getAllSync()) {
             ssJson.put(JSONObject().apply {
@@ -81,7 +82,7 @@ class BackupManager(private val db: FocusFlowDatabase) {
         }
         root.put("studySessions", ssJson)
 
-        // ReviewSchedules (status is String)
+        // ReviewSchedules
         val rsJson = JSONArray()
         for (rs in db.reviewScheduleDao().getAllSync()) {
             rsJson.put(JSONObject().apply {
@@ -116,17 +117,18 @@ class BackupManager(private val db: FocusFlowDatabase) {
         root.put("dailyStats", dsJson)
 
         return writeToFile(context, "focusflow_backup_${dateStr()}.json", root.toString(2))
+            ?: throw IOException("Failed to write backup file")
     }
 
     suspend fun importFromJson(context: Context, uri: Uri): Boolean {
         return try {
-            val json = readFromUri(context, uri)
+            val json = readFromUri(context, uri) ?: return false
             val root = JSONObject(json)
 
             val schemaVersion = root.optInt("schemaVersion", 1)
             if (schemaVersion > 1) return false
 
-            // Clear existing data in FK-safe order (children first)
+            // Clear existing data in FK-safe order
             db.reviewLogDao().deleteAll()
             db.reviewScheduleDao().deleteAll()
             db.studySessionDao().deleteAll()
@@ -136,7 +138,7 @@ class BackupManager(private val db: FocusFlowDatabase) {
             db.planDao().deleteAll()
             db.dailyStatsDao().deleteAll()
 
-            // Import plans (status: String -> PlanStatus enum)
+            // Import plans
             val plans = mutableListOf<Plan>()
             val plansArr = root.optJSONArray("plans") ?: JSONArray()
             for (i in 0 until plansArr.length()) {
@@ -156,7 +158,7 @@ class BackupManager(private val db: FocusFlowDatabase) {
             }
             if (plans.isNotEmpty()) db.planDao().upsert(plans)
 
-            // Import milestones (status is String)
+            // Import milestones
             val milestones = mutableListOf<Milestone>()
             val msArr = root.optJSONArray("milestones") ?: JSONArray()
             for (i in 0 until msArr.length()) {
@@ -175,7 +177,7 @@ class BackupManager(private val db: FocusFlowDatabase) {
             }
             if (milestones.isNotEmpty()) db.milestoneDao().upsert(milestones)
 
-            // Import tasks (status: String -> TaskStatus, priority: String -> Priority)
+            // Import tasks
             val tasks = mutableListOf<Task>()
             val tasksArr = root.optJSONArray("tasks") ?: JSONArray()
             for (i in 0 until tasksArr.length()) {
@@ -214,7 +216,7 @@ class BackupManager(private val db: FocusFlowDatabase) {
             }
             if (assignments.isNotEmpty()) db.dayAssignmentDao().upsert(assignments)
 
-            // Import study sessions (mood is String? not enum)
+            // Import study sessions
             val sessions = mutableListOf<StudySession>()
             val ssArr = root.optJSONArray("studySessions") ?: JSONArray()
             for (i in 0 until ssArr.length()) {
@@ -232,7 +234,7 @@ class BackupManager(private val db: FocusFlowDatabase) {
             }
             if (sessions.isNotEmpty()) db.studySessionDao().upsert(sessions)
 
-            // Import review schedules (status is String)
+            // Import review schedules
             val schedules = mutableListOf<ReviewSchedule>()
             val rsArr = root.optJSONArray("reviewSchedules") ?: JSONArray()
             for (i in 0 until rsArr.length()) {
@@ -290,23 +292,33 @@ class BackupManager(private val db: FocusFlowDatabase) {
         }
     }
 
-    private fun readFromUri(context: Context, uri: Uri): String {
-        return context.contentResolver.openInputStream(uri)!!.use { stream ->
-            stream.bufferedReader().use(BufferedReader::readText)
+    private fun readFromUri(context: Context, uri: Uri): String? {
+        return try {
+            context.contentResolver.openInputStream(uri)?.use { stream ->
+                stream.bufferedReader().use(BufferedReader::readText)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
     }
 
-    private fun writeToFile(context: Context, fileName: String, content: String): Uri {
-        val contentValues = android.content.ContentValues().apply {
-            put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-            put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "application/json")
-            put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, "Documents/FocusFlow")
+    private fun writeToFile(context: Context, fileName: String, content: String): Uri? {
+        return try {
+            val contentValues = android.content.ContentValues().apply {
+                put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "application/json")
+                put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, "Documents/FocusFlow")
+            }
+            val uri = context.contentResolver.insert(
+                android.provider.MediaStore.Files.getContentUri("external"), contentValues
+            ) ?: return null
+            context.contentResolver.openOutputStream(uri)?.use { it.write(content.toByteArray()) }
+            uri
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
-        val uri = context.contentResolver.insert(
-            android.provider.MediaStore.Files.getContentUri("external"), contentValues
-        )!!
-        context.contentResolver.openOutputStream(uri)!!.use { it.write(content.toByteArray()) }
-        return uri
     }
 
     private fun dateStr(): String = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"))

@@ -31,11 +31,9 @@ class DashboardViewModel @Inject constructor(
         val todayTasks: List<Task> = emptyList(),
         val completedTasks: Int = 0,
         val totalTasks: Int = 0,
-        val weekMinutes: Int = 0,
         val heatmapData: Map<Long, Int> = emptyMap()
     )
 
-    // Use tasks assigned to today (same as DailyPlan) for consistency
     val uiState: StateFlow<UiState> = combine(
         streakRepository.observeStreak(),
         sessionRepository.getTotalMinutesForDay(todayStart(), todayEnd()),
