@@ -40,4 +40,6 @@ interface StudySessionDao {
 
     @Query("SELECT * FROM study_sessions ORDER BY startTime DESC")
     suspend fun getAllSync(): List<StudySession>
+    @Query("DELETE FROM study_sessions")
+    suspend fun deleteAll()
 }

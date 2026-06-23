@@ -3,8 +3,10 @@ package com.focusflow.data.backup
 import android.content.Context
 import android.net.Uri
 import com.focusflow.data.db.FocusFlowDatabase
+import com.focusflow.data.db.entity.*
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.BufferedReader
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -66,7 +68,7 @@ class BackupManager(private val db: FocusFlowDatabase) {
         }
         root.put("dayAssignments", daJson)
 
-        // StudySessions (mood is Mood? enum -> use .value if not null)
+        // StudySessions (mood is String? not enum)
         val ssJson = JSONArray()
         for (s in db.studySessionDao().getAllSync()) {
             ssJson.put(JSONObject().apply {
@@ -117,9 +119,181 @@ class BackupManager(private val db: FocusFlowDatabase) {
     }
 
     suspend fun importFromJson(context: Context, uri: Uri): Boolean {
-        // TODO: Implement full import with entity reconstruction
-        // Requires careful handling of enum vs String status fields
-        return false
+        return try {
+            val json = readFromUri(context, uri)
+            val root = JSONObject(json)
+
+            val schemaVersion = root.optInt("schemaVersion", 1)
+            if (schemaVersion > 1) return false
+
+            // Clear existing data in FK-safe order (children first)
+            db.reviewLogDao().deleteAll()
+            db.reviewScheduleDao().deleteAll()
+            db.studySessionDao().deleteAll()
+            db.dayAssignmentDao().deleteAll()
+            db.taskDao().deleteAll()
+            db.milestoneDao().deleteAll()
+            db.planDao().deleteAll()
+            db.dailyStatsDao().deleteAll()
+
+            // Import plans (status: String -> PlanStatus enum)
+            val plans = mutableListOf<Plan>()
+            val plansArr = root.optJSONArray("plans") ?: JSONArray()
+            for (i in 0 until plansArr.length()) {
+                val o = plansArr.getJSONObject(i)
+                plans.add(Plan(
+                    id = o.getString("id"),
+                    title = o.getString("title"),
+                    description = o.optString("description", ""),
+                    category = o.optString("category", "general"),
+                    startDate = o.getLong("startDate"),
+                    endDate = o.getLong("endDate"),
+                    status = PlanStatus.fromValue(o.optString("status", "draft")),
+                    coverColor = o.optString("coverColor", "#4F46E5"),
+                    createdAt = o.optLong("createdAt", System.currentTimeMillis()),
+                    updatedAt = o.optLong("updatedAt", System.currentTimeMillis())
+                ))
+            }
+            if (plans.isNotEmpty()) db.planDao().upsert(plans)
+
+            // Import milestones (status is String)
+            val milestones = mutableListOf<Milestone>()
+            val msArr = root.optJSONArray("milestones") ?: JSONArray()
+            for (i in 0 until msArr.length()) {
+                val o = msArr.getJSONObject(i)
+                milestones.add(Milestone(
+                    id = o.getString("id"),
+                    planId = o.getString("planId"),
+                    title = o.getString("title"),
+                    description = o.optString("description", ""),
+                    targetDate = if (o.isNull("targetDate")) null else o.getLong("targetDate"),
+                    order = o.optInt("order", 0),
+                    status = o.optString("status", "pending"),
+                    createdAt = o.optLong("createdAt", System.currentTimeMillis()),
+                    updatedAt = o.optLong("updatedAt", System.currentTimeMillis())
+                ))
+            }
+            if (milestones.isNotEmpty()) db.milestoneDao().upsert(milestones)
+
+            // Import tasks (status: String -> TaskStatus, priority: String -> Priority)
+            val tasks = mutableListOf<Task>()
+            val tasksArr = root.optJSONArray("tasks") ?: JSONArray()
+            for (i in 0 until tasksArr.length()) {
+                val o = tasksArr.getJSONObject(i)
+                tasks.add(Task(
+                    id = o.getString("id"),
+                    milestoneId = o.getString("milestoneId"),
+                    title = o.getString("title"),
+                    description = o.optString("description", ""),
+                    estimatedMinutes = o.optInt("estimatedMinutes", 30),
+                    actualMinutes = o.optInt("actualMinutes", 0),
+                    priority = Priority.fromValue(o.optString("priority", "medium")),
+                    status = TaskStatus.fromValue(o.optString("status", "todo")),
+                    dependsOn = if (o.isNull("dependsOn")) null else o.getString("dependsOn"),
+                    dueDate = if (o.isNull("dueDate")) null else o.getLong("dueDate"),
+                    completedAt = if (o.isNull("completedAt")) null else o.getLong("completedAt"),
+                    createdAt = o.optLong("createdAt", System.currentTimeMillis()),
+                    updatedAt = o.optLong("updatedAt", System.currentTimeMillis())
+                ))
+            }
+            if (tasks.isNotEmpty()) db.taskDao().upsert(tasks)
+
+            // Import day assignments
+            val assignments = mutableListOf<DayAssignment>()
+            val daArr = root.optJSONArray("dayAssignments") ?: JSONArray()
+            for (i in 0 until daArr.length()) {
+                val o = daArr.getJSONObject(i)
+                assignments.add(DayAssignment(
+                    id = o.getString("id"),
+                    taskId = o.getString("taskId"),
+                    date = o.getLong("date"),
+                    order = o.optInt("order", 0),
+                    isTemporary = o.optBoolean("isTemporary", false),
+                    createdAt = o.optLong("createdAt", System.currentTimeMillis())
+                ))
+            }
+            if (assignments.isNotEmpty()) db.dayAssignmentDao().upsert(assignments)
+
+            // Import study sessions (mood is String? not enum)
+            val sessions = mutableListOf<StudySession>()
+            val ssArr = root.optJSONArray("studySessions") ?: JSONArray()
+            for (i in 0 until ssArr.length()) {
+                val o = ssArr.getJSONObject(i)
+                sessions.add(StudySession(
+                    id = o.getString("id"),
+                    taskId = o.getString("taskId"),
+                    startTime = o.getLong("startTime"),
+                    endTime = if (o.isNull("endTime")) null else o.getLong("endTime"),
+                    durationMinutes = o.optInt("durationMinutes", 0),
+                    note = o.optString("note", ""),
+                    mood = if (o.isNull("mood")) null else o.getString("mood"),
+                    createdAt = o.optLong("createdAt", System.currentTimeMillis())
+                ))
+            }
+            if (sessions.isNotEmpty()) db.studySessionDao().upsert(sessions)
+
+            // Import review schedules (status is String)
+            val schedules = mutableListOf<ReviewSchedule>()
+            val rsArr = root.optJSONArray("reviewSchedules") ?: JSONArray()
+            for (i in 0 until rsArr.length()) {
+                val o = rsArr.getJSONObject(i)
+                schedules.add(ReviewSchedule(
+                    id = o.getString("id"),
+                    taskId = o.getString("taskId"),
+                    reviewIntervals = o.optString("reviewIntervals", "[1,3,7,14,30]"),
+                    currentRound = o.optInt("currentRound", 0),
+                    nextReviewDate = o.getLong("nextReviewDate"),
+                    lastReviewDate = if (o.isNull("lastReviewDate")) null else o.getLong("lastReviewDate"),
+                    totalRounds = o.optInt("totalRounds", 5),
+                    status = o.optString("status", "active"),
+                    createdAt = o.optLong("createdAt", System.currentTimeMillis()),
+                    updatedAt = o.optLong("updatedAt", System.currentTimeMillis())
+                ))
+            }
+            if (schedules.isNotEmpty()) db.reviewScheduleDao().upsert(schedules)
+
+            // Import review logs
+            val logs = mutableListOf<ReviewLog>()
+            val rlArr = root.optJSONArray("reviewLogs") ?: JSONArray()
+            for (i in 0 until rlArr.length()) {
+                val o = rlArr.getJSONObject(i)
+                logs.add(ReviewLog(
+                    id = o.getString("id"),
+                    scheduleId = o.getString("scheduleId"),
+                    round = o.getInt("round"),
+                    reviewedAt = o.getLong("reviewedAt"),
+                    createdAt = o.optLong("createdAt", System.currentTimeMillis())
+                ))
+            }
+            if (logs.isNotEmpty()) db.reviewLogDao().upsert(logs)
+
+            // Import daily stats
+            val stats = mutableListOf<DailyStats>()
+            val dsArr = root.optJSONArray("dailyStats") ?: JSONArray()
+            for (i in 0 until dsArr.length()) {
+                val o = dsArr.getJSONObject(i)
+                stats.add(DailyStats(
+                    date = o.getLong("date"),
+                    totalMinutes = o.optInt("totalMinutes", 0),
+                    tasksCompleted = o.optInt("tasksCompleted", 0),
+                    reviewsDone = o.optInt("reviewsDone", 0),
+                    streakDays = o.optInt("streakDays", 0),
+                    updatedAt = o.optLong("updatedAt", System.currentTimeMillis())
+                ))
+            }
+            if (stats.isNotEmpty()) db.dailyStatsDao().upsert(stats)
+
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    private fun readFromUri(context: Context, uri: Uri): String {
+        return context.contentResolver.openInputStream(uri)!!.use { stream ->
+            stream.bufferedReader().use(BufferedReader::readText)
+        }
     }
 
     private fun writeToFile(context: Context, fileName: String, content: String): Uri {

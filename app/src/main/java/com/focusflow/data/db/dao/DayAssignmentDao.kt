@@ -36,4 +36,6 @@ interface DayAssignmentDao {
 
     @Query("SELECT * FROM day_assignments ORDER BY date ASC, \"order\" ASC")
     suspend fun getAllSync(): List<DayAssignment>
+    @Query("DELETE FROM day_assignments")
+    suspend fun deleteAll()
 }

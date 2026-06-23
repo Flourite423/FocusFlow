@@ -56,4 +56,6 @@ interface ReviewScheduleDao {
 
     @Query("SELECT COUNT(*) FROM review_schedules WHERE nextReviewDate <= :today AND status = 'active'")
     suspend fun getDueReviewCountSync(today: Long): Int
+    @Query("DELETE FROM review_schedules")
+    suspend fun deleteAll()
 }

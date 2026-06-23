@@ -40,4 +40,6 @@ interface DailyStatsDao {
 
     @Query("SELECT * FROM daily_stats ORDER BY date DESC")
     suspend fun getAllSync(): List<DailyStats>
+    @Query("DELETE FROM daily_stats")
+    suspend fun deleteAll()
 }

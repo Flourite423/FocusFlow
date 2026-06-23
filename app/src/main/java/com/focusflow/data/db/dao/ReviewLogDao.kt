@@ -27,4 +27,6 @@ interface ReviewLogDao {
 
     @Query("SELECT * FROM review_logs ORDER BY reviewedAt DESC")
     suspend fun getAllSync(): List<ReviewLog>
+    @Query("DELETE FROM review_logs")
+    suspend fun deleteAll()
 }

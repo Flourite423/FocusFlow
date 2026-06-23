@@ -48,4 +48,6 @@ interface MilestoneDao {
         val totalTasks: Int,
         val completedTasks: Int
     )
+    @Query("DELETE FROM milestones")
+    suspend fun deleteAll()
 }
