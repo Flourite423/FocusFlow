@@ -3,7 +3,7 @@ package com.focusflow.ui.plan
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.focusflow.data.db.dao.AssignmentWithTitle
-import com.focusflow.data.db.dao.DayAssignmentDao
+import com.focusflow.data.repository.TaskRepository
 import com.focusflow.util.weekStart
 import com.focusflow.util.weekEnd
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,7 +15,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class WeeklyPlanViewModel @Inject constructor(
-    private val assignmentDao: DayAssignmentDao
+    private val taskRepository: TaskRepository
 ) : ViewModel() {
 
     data class DayInfo(
@@ -28,7 +28,7 @@ class WeeklyPlanViewModel @Inject constructor(
         val totalAssigned: Int = 0
     )
 
-    val uiState: StateFlow<UiState> = assignmentDao.getAssignmentsWithTitles(weekStart(), weekEnd()).map { assignments ->
+    val uiState: StateFlow<UiState> = taskRepository.getAssignmentsWithTitles(weekStart(), weekEnd()).map { assignments ->
         val grouped = assignments.groupBy { ((it.date - weekStart()) / (24 * 60 * 60 * 1000)).toInt() }
         val dayInfoMap = grouped.mapValues { (_, dayAssignments) ->
             DayInfo(

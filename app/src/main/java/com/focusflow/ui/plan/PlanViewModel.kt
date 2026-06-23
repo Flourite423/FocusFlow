@@ -2,8 +2,6 @@ package com.focusflow.ui.plan
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.focusflow.data.db.dao.MilestoneDao
-import com.focusflow.data.db.entity.Milestone
 import com.focusflow.data.db.entity.Plan
 import com.focusflow.data.db.entity.PlanStatus
 import com.focusflow.data.repository.PlanRepository
@@ -19,8 +17,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class PlanViewModel @Inject constructor(
-    private val planRepository: PlanRepository,
-    private val milestoneDao: MilestoneDao
+    private val planRepository: PlanRepository
 ) : ViewModel() {
 
     data class UiState(

@@ -1,5 +1,6 @@
 package com.focusflow.data.repository
 
+import com.focusflow.data.db.dao.AssignmentWithTitle
 import com.focusflow.data.db.dao.DayAssignmentDao
 import com.focusflow.data.db.dao.TaskDao
 import com.focusflow.data.db.entity.DayAssignment
@@ -22,13 +23,15 @@ class TaskRepository @Inject constructor(
 
     suspend fun getTaskById(id: String): Task? = taskDao.getById(id)
 
+    fun getAssignmentsWithTitles(weekStart: Long, weekEnd: Long): Flow<List<AssignmentWithTitle>> =
+        assignmentDao.getAssignmentsWithTitles(weekStart, weekEnd)
+
     suspend fun updateTaskStatus(id: String, status: TaskStatus, completedAt: Long? = null) {
         val now = System.currentTimeMillis()
         taskDao.updateStatus(id, status.value, now)
         if (status == TaskStatus.DONE && completedAt != null) {
             taskDao.updateCompletedAt(id, completedAt, now)
         } else if (status == TaskStatus.TODO) {
-            // Clear completedAt when un-completing
             taskDao.updateCompletedAt(id, 0L, now)
         }
     }

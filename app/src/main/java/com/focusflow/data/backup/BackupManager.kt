@@ -18,7 +18,6 @@ class BackupManager(private val db: FocusFlowDatabase) {
         root.put("schemaVersion", 1)
         root.put("exportedAt", System.currentTimeMillis())
 
-        // Plans
         val plansJson = JSONArray()
         for (p in db.planDao().getAllSync()) {
             plansJson.put(JSONObject().apply {
@@ -30,7 +29,6 @@ class BackupManager(private val db: FocusFlowDatabase) {
         }
         root.put("plans", plansJson)
 
-        // Milestones
         val msJson = JSONArray()
         for (p2 in db.planDao().getAllSync()) for (m in db.milestoneDao().getAllSync(p2.id)) {
             msJson.put(JSONObject().apply {
@@ -43,7 +41,6 @@ class BackupManager(private val db: FocusFlowDatabase) {
         }
         root.put("milestones", msJson)
 
-        // Tasks
         val tasksJson = JSONArray()
         for (t in db.taskDao().getAllSync()) {
             tasksJson.put(JSONObject().apply {
@@ -59,7 +56,6 @@ class BackupManager(private val db: FocusFlowDatabase) {
         }
         root.put("tasks", tasksJson)
 
-        // DayAssignments
         val daJson = JSONArray()
         for (da in db.dayAssignmentDao().getAllSync()) {
             daJson.put(JSONObject().apply {
@@ -69,7 +65,6 @@ class BackupManager(private val db: FocusFlowDatabase) {
         }
         root.put("dayAssignments", daJson)
 
-        // StudySessions
         val ssJson = JSONArray()
         for (s in db.studySessionDao().getAllSync()) {
             ssJson.put(JSONObject().apply {
@@ -82,7 +77,6 @@ class BackupManager(private val db: FocusFlowDatabase) {
         }
         root.put("studySessions", ssJson)
 
-        // ReviewSchedules
         val rsJson = JSONArray()
         for (rs in db.reviewScheduleDao().getAllSync()) {
             rsJson.put(JSONObject().apply {
@@ -95,7 +89,6 @@ class BackupManager(private val db: FocusFlowDatabase) {
         }
         root.put("reviewSchedules", rsJson)
 
-        // ReviewLogs
         val rlJson = JSONArray()
         for (rl in db.reviewLogDao().getAllSync()) {
             rlJson.put(JSONObject().apply {
@@ -105,7 +98,6 @@ class BackupManager(private val db: FocusFlowDatabase) {
         }
         root.put("reviewLogs", rlJson)
 
-        // DailyStats
         val dsJson = JSONArray()
         for (ds in db.dailyStatsDao().getAllSync()) {
             dsJson.put(JSONObject().apply {
@@ -124,11 +116,9 @@ class BackupManager(private val db: FocusFlowDatabase) {
         return try {
             val json = readFromUri(context, uri) ?: return false
             val root = JSONObject(json)
-
             val schemaVersion = root.optInt("schemaVersion", 1)
             if (schemaVersion > 1) return false
 
-            // Clear existing data in FK-safe order
             db.reviewLogDao().deleteAll()
             db.reviewScheduleDao().deleteAll()
             db.studySessionDao().deleteAll()
@@ -138,150 +128,94 @@ class BackupManager(private val db: FocusFlowDatabase) {
             db.planDao().deleteAll()
             db.dailyStatsDao().deleteAll()
 
-            // Import plans
             val plans = mutableListOf<Plan>()
             val plansArr = root.optJSONArray("plans") ?: JSONArray()
             for (i in 0 until plansArr.length()) {
                 val o = plansArr.getJSONObject(i)
-                plans.add(Plan(
-                    id = o.getString("id"),
-                    title = o.getString("title"),
-                    description = o.optString("description", ""),
-                    category = o.optString("category", "general"),
-                    startDate = o.getLong("startDate"),
-                    endDate = o.getLong("endDate"),
-                    status = PlanStatus.fromValue(o.optString("status", "draft")),
-                    coverColor = o.optString("coverColor", "#4F46E5"),
-                    createdAt = o.optLong("createdAt", System.currentTimeMillis()),
-                    updatedAt = o.optLong("updatedAt", System.currentTimeMillis())
-                ))
+                plans.add(Plan(id = o.getString("id"), title = o.getString("title"), description = o.optString("description", ""),
+                    category = o.optString("category", "general"), startDate = o.getLong("startDate"), endDate = o.getLong("endDate"),
+                    status = PlanStatus.fromValue(o.optString("status", "draft")), coverColor = o.optString("coverColor", "#4F46E5"),
+                    createdAt = o.optLong("createdAt", System.currentTimeMillis()), updatedAt = o.optLong("updatedAt", System.currentTimeMillis())))
             }
             if (plans.isNotEmpty()) db.planDao().upsert(plans)
 
-            // Import milestones
             val milestones = mutableListOf<Milestone>()
             val msArr = root.optJSONArray("milestones") ?: JSONArray()
             for (i in 0 until msArr.length()) {
                 val o = msArr.getJSONObject(i)
-                milestones.add(Milestone(
-                    id = o.getString("id"),
-                    planId = o.getString("planId"),
-                    title = o.getString("title"),
-                    description = o.optString("description", ""),
-                    targetDate = if (o.isNull("targetDate")) null else o.getLong("targetDate"),
-                    order = o.optInt("order", 0),
-                    status = o.optString("status", "pending"),
-                    createdAt = o.optLong("createdAt", System.currentTimeMillis()),
-                    updatedAt = o.optLong("updatedAt", System.currentTimeMillis())
-                ))
+                milestones.add(Milestone(id = o.getString("id"), planId = o.getString("planId"), title = o.getString("title"),
+                    description = o.optString("description", ""), targetDate = if (o.isNull("targetDate")) null else o.getLong("targetDate"),
+                    order = o.optInt("order", 0), status = o.optString("status", "pending"),
+                    createdAt = o.optLong("createdAt", System.currentTimeMillis()), updatedAt = o.optLong("updatedAt", System.currentTimeMillis())))
             }
             if (milestones.isNotEmpty()) db.milestoneDao().upsert(milestones)
 
-            // Import tasks
             val tasks = mutableListOf<Task>()
             val tasksArr = root.optJSONArray("tasks") ?: JSONArray()
             for (i in 0 until tasksArr.length()) {
                 val o = tasksArr.getJSONObject(i)
-                tasks.add(Task(
-                    id = o.getString("id"),
-                    milestoneId = o.getString("milestoneId"),
-                    title = o.getString("title"),
-                    description = o.optString("description", ""),
-                    estimatedMinutes = o.optInt("estimatedMinutes", 30),
-                    actualMinutes = o.optInt("actualMinutes", 0),
-                    priority = Priority.fromValue(o.optString("priority", "medium")),
+                tasks.add(Task(id = o.getString("id"), milestoneId = o.getString("milestoneId"), title = o.getString("title"),
+                    description = o.optString("description", ""), estimatedMinutes = o.optInt("estimatedMinutes", 30),
+                    actualMinutes = o.optInt("actualMinutes", 0), priority = Priority.fromValue(o.optString("priority", "medium")),
                     status = TaskStatus.fromValue(o.optString("status", "todo")),
                     dependsOn = if (o.isNull("dependsOn")) null else o.getString("dependsOn"),
                     dueDate = if (o.isNull("dueDate")) null else o.getLong("dueDate"),
                     completedAt = if (o.isNull("completedAt")) null else o.getLong("completedAt"),
-                    createdAt = o.optLong("createdAt", System.currentTimeMillis()),
-                    updatedAt = o.optLong("updatedAt", System.currentTimeMillis())
-                ))
+                    createdAt = o.optLong("createdAt", System.currentTimeMillis()), updatedAt = o.optLong("updatedAt", System.currentTimeMillis())))
             }
             if (tasks.isNotEmpty()) db.taskDao().upsert(tasks)
 
-            // Import day assignments
             val assignments = mutableListOf<DayAssignment>()
             val daArr = root.optJSONArray("dayAssignments") ?: JSONArray()
             for (i in 0 until daArr.length()) {
                 val o = daArr.getJSONObject(i)
-                assignments.add(DayAssignment(
-                    id = o.getString("id"),
-                    taskId = o.getString("taskId"),
-                    date = o.getLong("date"),
-                    order = o.optInt("order", 0),
-                    isTemporary = o.optBoolean("isTemporary", false),
-                    createdAt = o.optLong("createdAt", System.currentTimeMillis())
-                ))
+                assignments.add(DayAssignment(id = o.getString("id"), taskId = o.getString("taskId"), date = o.getLong("date"),
+                    order = o.optInt("order", 0), isTemporary = o.optBoolean("isTemporary", false),
+                    createdAt = o.optLong("createdAt", System.currentTimeMillis())))
             }
             if (assignments.isNotEmpty()) db.dayAssignmentDao().upsert(assignments)
 
-            // Import study sessions
             val sessions = mutableListOf<StudySession>()
             val ssArr = root.optJSONArray("studySessions") ?: JSONArray()
             for (i in 0 until ssArr.length()) {
                 val o = ssArr.getJSONObject(i)
-                sessions.add(StudySession(
-                    id = o.getString("id"),
-                    taskId = o.getString("taskId"),
-                    startTime = o.getLong("startTime"),
-                    endTime = if (o.isNull("endTime")) null else o.getLong("endTime"),
-                    durationMinutes = o.optInt("durationMinutes", 0),
-                    note = o.optString("note", ""),
-                    mood = if (o.isNull("mood")) null else o.getString("mood"),
-                    createdAt = o.optLong("createdAt", System.currentTimeMillis())
-                ))
+                sessions.add(StudySession(id = o.getString("id"), taskId = o.getString("taskId"), startTime = o.getLong("startTime"),
+                    endTime = if (o.isNull("endTime")) null else o.getLong("endTime"), durationMinutes = o.optInt("durationMinutes", 0),
+                    note = o.optString("note", ""), mood = if (o.isNull("mood")) null else o.getString("mood"),
+                    createdAt = o.optLong("createdAt", System.currentTimeMillis())))
             }
             if (sessions.isNotEmpty()) db.studySessionDao().upsert(sessions)
 
-            // Import review schedules
             val schedules = mutableListOf<ReviewSchedule>()
             val rsArr = root.optJSONArray("reviewSchedules") ?: JSONArray()
             for (i in 0 until rsArr.length()) {
                 val o = rsArr.getJSONObject(i)
-                schedules.add(ReviewSchedule(
-                    id = o.getString("id"),
-                    taskId = o.getString("taskId"),
-                    reviewIntervals = o.optString("reviewIntervals", "[1,3,7,14,30]"),
-                    currentRound = o.optInt("currentRound", 0),
+                schedules.add(ReviewSchedule(id = o.getString("id"), taskId = o.getString("taskId"),
+                    reviewIntervals = o.optString("reviewIntervals", "[1,3,7,14,30]"), currentRound = o.optInt("currentRound", 0),
                     nextReviewDate = o.getLong("nextReviewDate"),
                     lastReviewDate = if (o.isNull("lastReviewDate")) null else o.getLong("lastReviewDate"),
-                    totalRounds = o.optInt("totalRounds", 5),
-                    status = o.optString("status", "active"),
-                    createdAt = o.optLong("createdAt", System.currentTimeMillis()),
-                    updatedAt = o.optLong("updatedAt", System.currentTimeMillis())
-                ))
+                    totalRounds = o.optInt("totalRounds", 5), status = o.optString("status", "active"),
+                    createdAt = o.optLong("createdAt", System.currentTimeMillis()), updatedAt = o.optLong("updatedAt", System.currentTimeMillis())))
             }
             if (schedules.isNotEmpty()) db.reviewScheduleDao().upsert(schedules)
 
-            // Import review logs
             val logs = mutableListOf<ReviewLog>()
             val rlArr = root.optJSONArray("reviewLogs") ?: JSONArray()
             for (i in 0 until rlArr.length()) {
                 val o = rlArr.getJSONObject(i)
-                logs.add(ReviewLog(
-                    id = o.getString("id"),
-                    scheduleId = o.getString("scheduleId"),
-                    round = o.getInt("round"),
-                    reviewedAt = o.getLong("reviewedAt"),
-                    createdAt = o.optLong("createdAt", System.currentTimeMillis())
-                ))
+                logs.add(ReviewLog(id = o.getString("id"), scheduleId = o.getString("scheduleId"),
+                    round = o.getInt("round"), reviewedAt = o.getLong("reviewedAt"),
+                    createdAt = o.optLong("createdAt", System.currentTimeMillis())))
             }
             if (logs.isNotEmpty()) db.reviewLogDao().upsert(logs)
 
-            // Import daily stats
             val stats = mutableListOf<DailyStats>()
             val dsArr = root.optJSONArray("dailyStats") ?: JSONArray()
             for (i in 0 until dsArr.length()) {
                 val o = dsArr.getJSONObject(i)
-                stats.add(DailyStats(
-                    date = o.getLong("date"),
-                    totalMinutes = o.optInt("totalMinutes", 0),
-                    tasksCompleted = o.optInt("tasksCompleted", 0),
-                    reviewsDone = o.optInt("reviewsDone", 0),
-                    streakDays = o.optInt("streakDays", 0),
-                    updatedAt = o.optLong("updatedAt", System.currentTimeMillis())
-                ))
+                stats.add(DailyStats(date = o.getLong("date"), totalMinutes = o.optInt("totalMinutes", 0),
+                    tasksCompleted = o.optInt("tasksCompleted", 0), reviewsDone = o.optInt("reviewsDone", 0),
+                    streakDays = o.optInt("streakDays", 0), updatedAt = o.optLong("updatedAt", System.currentTimeMillis())))
             }
             if (stats.isNotEmpty()) db.dailyStatsDao().upsert(stats)
 
@@ -313,7 +247,8 @@ class BackupManager(private val db: FocusFlowDatabase) {
             val uri = context.contentResolver.insert(
                 android.provider.MediaStore.Files.getContentUri("external"), contentValues
             ) ?: return null
-            context.contentResolver.openOutputStream(uri)?.use { it.write(content.toByteArray()) }
+            val outputStream = context.contentResolver.openOutputStream(uri) ?: return null
+            outputStream.use { it.write(content.toByteArray()) }
             uri
         } catch (e: Exception) {
             e.printStackTrace()
