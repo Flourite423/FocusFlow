@@ -28,8 +28,10 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.focusflow.ui.dashboard.DashboardScreen
 import com.focusflow.ui.dashboard.DailyReviewScreen
+import com.focusflow.ui.plan.DailyPlanScreen
 import com.focusflow.ui.plan.PlanDetailScreen
 import com.focusflow.ui.plan.PlanListScreen
+import com.focusflow.ui.plan.WeeklyPlanScreen
 import com.focusflow.ui.review.ReviewScreen
 import com.focusflow.ui.settings.SettingsScreen
 import com.focusflow.ui.timer.TimerScreen
@@ -56,6 +58,8 @@ fun MainNavHost(modifier: Modifier = Modifier) {
                 val planId = backStackEntry.arguments?.getString("planId") ?: ""
                 PlanDetailScreen(planId = planId, navController = navController)
             }
+            composable(Screen.WeeklyPlan.createRoute()) { WeeklyPlanScreen(navController = navController) }
+            composable(Screen.DailyPlan.createRoute()) { DailyPlanScreen(navController = navController) }
             composable(Screen.Timer.createRoute()) { TimerScreen(navController = navController) }
             composable(Screen.Review.createRoute()) { ReviewScreen(navController = navController) }
             composable(Screen.Settings.createRoute()) { SettingsScreen(navController = navController) }

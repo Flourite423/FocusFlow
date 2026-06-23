@@ -20,6 +20,14 @@ sealed interface Screen {
         override fun createRoute() = "plan/$planId"
     }
 
+    object WeeklyPlan : Screen {
+        override fun createRoute() = "weekly_plan"
+    }
+
+    object DailyPlan : Screen {
+        override fun createRoute() = "daily_plan"
+    }
+
     object Timer : Screen {
         override fun createRoute() = "timer"
     }

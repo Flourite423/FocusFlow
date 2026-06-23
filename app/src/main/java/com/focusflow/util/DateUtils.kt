@@ -36,6 +36,15 @@ fun weekEnd(): Long {
     return endOfWeek.atTime(23, 59, 59, 999_999_999).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 }
 
+fun monthStart(): Long {
+    return LocalDate.now().withDayOfMonth(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+}
+
+fun monthEnd(): Long {
+    return LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth())
+        .atTime(23, 59, 59, 999_999_999).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+}
+
 fun Long.toFormattedString(): String {
     val localDate = this.toLocalDate()
     return String.format("%04d-%02d-%02d", localDate.year, localDate.monthValue, localDate.dayOfMonth)
