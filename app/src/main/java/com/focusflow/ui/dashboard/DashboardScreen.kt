@@ -1,6 +1,7 @@
 package com.focusflow.ui.dashboard
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,7 +9,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -30,6 +31,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,12 +43,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.focusflow.data.db.entity.Task
-import com.focusflow.ui.components.FocusProgressBar
-import java.time.Instant
+import com.focusflow.navigation.Screen
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
+import java.time.LocalTime
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -55,6 +55,16 @@ fun DashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val greeting = remember {
+        val hour = LocalTime.now().hour
+        when {
+            hour < 6 -> "夜深了"
+            hour < 12 -> "早上好"
+            hour < 14 -> "中午好"
+            hour < 18 -> "下午好"
+            else -> "晚上好"
+        }
+    }
 
     Scaffold { padding ->
         LazyColumn(
@@ -62,6 +72,20 @@ fun DashboardScreen(
             contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Greeting
+            item {
+                Text(
+                    greeting,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "今天也要加油学习哦",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
             // Top stats row
             item {
                 Row(
@@ -89,6 +113,29 @@ fun DashboardScreen(
                 }
             }
 
+            // Quick actions
+            item {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    QuickActionCard(
+                        modifier = Modifier.weight(1f),
+                        icon = { Icon(Icons.Default.Star, null, tint = Color(0xFFF59E0B)) },
+                        title = "今日计划",
+                        subtitle = "查看今天的任务",
+                        onClick = { navController.navigate(Screen.DailyPlan.createRoute()) }
+                    )
+                    QuickActionCard(
+                        modifier = Modifier.weight(1f),
+                        icon = { Icon(Icons.Default.DateRange, null, tint = Color(0xFF8B5CF6)) },
+                        title = "周计划",
+                        subtitle = "查看本周安排",
+                        onClick = { navController.navigate(Screen.WeeklyPlan.createRoute()) }
+                    )
+                }
+            }
+
             // Today's tasks
             item {
                 Text("今日任务", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -108,7 +155,7 @@ fun DashboardScreen(
                 }
             }
 
-            // Heatmap placeholder
+            // Heatmap
             item {
                 Text("学习热力图", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             }
@@ -130,6 +177,32 @@ private fun StatCard(modifier: Modifier, icon: @Composable () -> Unit, value: St
             Spacer(Modifier.height(4.dp))
             Text(value, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Text(label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun QuickActionCard(
+    modifier: Modifier,
+    icon: @Composable () -> Unit,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier.clickable(onClick = onClick),
+        elevation = CardDefaults.cardElevation(1.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            icon()
+            Spacer(Modifier.width(8.dp))
+            Column {
+                Text(title, style = MaterialTheme.typography.titleSmall)
+                Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }

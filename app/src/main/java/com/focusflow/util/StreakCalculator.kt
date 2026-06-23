@@ -1,6 +1,7 @@
 package com.focusflow.util
 
 import com.focusflow.data.db.entity.DailyStats
+import java.time.LocalDate
 
 object StreakCalculator {
     const val MIN_MINUTES = 5
@@ -22,5 +23,16 @@ object StreakCalculator {
             }
         }
         return streak
+    }
+
+    /**
+     * Check if the streak should reset at month boundary.
+     * If the last active day was in a different month than today, reset streak.
+     */
+    fun shouldResetMonthly(lastActiveDate: Long?): Boolean {
+        if (lastActiveDate == null) return false
+        val lastMonth = lastActiveDate.toLocalDate().withDayOfMonth(1)
+        val thisMonth = LocalDate.now().withDayOfMonth(1)
+        return lastMonth.isBefore(thisMonth)
     }
 }
