@@ -11,11 +11,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -117,6 +119,7 @@ fun PlanDetailScreen(
                         tasks = tasks,
                         onAddTask = { addTaskToMilestone = milestone.id },
                         onToggleTask = { task -> viewModel.toggleTaskStatus(task) },
+                        onAssignToToday = { task -> viewModel.assignTaskToToday(task.id) },
                         onDeleteTask = { viewModel.deleteTask(it) }
                     )
                 }
@@ -153,6 +156,7 @@ private fun MilestoneCard(
     tasks: List<Task>,
     onAddTask: () -> Unit,
     onToggleTask: (Task) -> Unit,
+    onAssignToToday: (Task) -> Unit,
     onDeleteTask: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -191,6 +195,7 @@ private fun MilestoneCard(
                         TaskRow(
                             task = task,
                             onToggle = { onToggleTask(task) },
+                            onAssignToToday = { onAssignToToday(task) },
                             onDelete = { onDeleteTask(task.id) }
                         )
                     }
@@ -211,7 +216,7 @@ private fun MilestoneCard(
 }
 
 @Composable
-private fun TaskRow(task: Task, onToggle: () -> Unit, onDelete: () -> Unit) {
+private fun TaskRow(task: Task, onToggle: () -> Unit, onAssignToToday: () -> Unit, onDelete: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -231,6 +236,9 @@ private fun TaskRow(task: Task, onToggle: () -> Unit, onDelete: () -> Unit) {
             if (task.description.isNotBlank()) {
                 Text(task.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        }
+        IconButton(onClick = onAssignToToday) {
+            Icon(Icons.Default.DateRange, contentDescription = "分配到今天", tint = MaterialTheme.colorScheme.primary)
         }
         IconButton(onClick = onDelete) {
             Icon(Icons.Default.Delete, contentDescription = "删除", tint = MaterialTheme.colorScheme.error)

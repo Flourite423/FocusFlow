@@ -10,6 +10,9 @@ import com.focusflow.data.db.entity.Plan
 import com.focusflow.data.db.entity.Task
 import com.focusflow.data.db.entity.TaskStatus
 import com.focusflow.data.repository.PlanRepository
+import com.focusflow.data.repository.TaskRepository
+import com.focusflow.domain.usecase.CompleteTaskUseCase
+import com.focusflow.util.todayEpoch
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,7 +30,9 @@ class PlanDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val planRepository: PlanRepository,
     private val milestoneDao: MilestoneDao,
-    private val taskDao: TaskDao
+    private val taskDao: TaskDao,
+    private val taskRepository: TaskRepository,
+    private val completeTaskUseCase: CompleteTaskUseCase
 ) : ViewModel() {
 
     private val planId: String = savedStateHandle.get<String>("planId") ?: ""
@@ -87,14 +92,21 @@ class PlanDetailViewModel @Inject constructor(
 
     fun toggleTaskStatus(task: Task) {
         viewModelScope.launch {
-            val newStatus = if (task.status == TaskStatus.DONE) TaskStatus.TODO else TaskStatus.DONE
-            val now = System.currentTimeMillis()
-            taskDao.updateStatus(task.id, newStatus.value, now)
-            if (newStatus == TaskStatus.DONE) {
-                taskDao.updateCompletedAt(task.id, now, now)
-            } else {
+            if (task.status == TaskStatus.DONE) {
+                // Mark as TODO again
+                val now = System.currentTimeMillis()
+                taskDao.updateStatus(task.id, TaskStatus.TODO.value, now)
                 taskDao.updateCompletedAt(task.id, 0L, now)
+            } else {
+                // Mark as DONE with full completion flow
+                completeTaskUseCase(task.id)
             }
+        }
+    }
+
+    fun assignTaskToToday(taskId: String) {
+        viewModelScope.launch {
+            taskRepository.assignTaskToDay(taskId, todayEpoch())
         }
     }
 

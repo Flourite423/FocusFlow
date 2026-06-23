@@ -1,5 +1,6 @@
 package com.focusflow.ui.timer
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,13 +11,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -28,7 +31,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -37,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.focusflow.data.db.entity.Task
 import kotlinx.coroutines.delay
 
 @Composable
@@ -45,6 +51,7 @@ fun TimerScreen(
     viewModel: TimerViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var selectedTask by remember { mutableStateOf<Task?>(null) }
 
     // Tick every second when running and not paused
     LaunchedEffect(uiState.isRunning, uiState.isPaused) {
@@ -57,8 +64,7 @@ fun TimerScreen(
     Scaffold { padding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Timer display
             val hours = uiState.elapsedSeconds / 3600
@@ -69,6 +75,8 @@ fun TimerScreen(
             } else {
                 String.format("%02d:%02d", minutes, seconds)
             }
+
+            Spacer(Modifier.height(48.dp))
 
             Text(
                 text = timeStr,
@@ -82,7 +90,10 @@ fun TimerScreen(
             Text(
                 text = when {
                     uiState.isRunning && uiState.isPaused -> "已暂停"
-                    uiState.isRunning -> "学习中..."
+                    uiState.isRunning -> {
+                        val taskInfo = uiState.currentTaskTitle ?: "学习中"
+                        "$taskInfo..."
+                    }
                     uiState.savedMinutes > 0 -> "已学习 ${uiState.savedMinutes} 分钟"
                     else -> "准备开始学习"
                 },
@@ -92,16 +103,68 @@ fun TimerScreen(
 
             Spacer(Modifier.height(48.dp))
 
-            // Controls
+            // Task selector (only when not running)
             if (!uiState.isRunning) {
+                Text(
+                    "选择任务（可选）",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+
+                if (uiState.availableTasks.isEmpty()) {
+                    Card(Modifier.fillMaxWidth()) {
+                        Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                            Text("暂无可用任务", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        itemsIndexed(uiState.availableTasks) { _, task ->
+                            val isSelected = selectedTask?.id == task.id
+                            Card(
+                                modifier = Modifier.fillMaxWidth().clickable {
+                                    selectedTask = if (isSelected) null else task
+                                },
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                    else MaterialTheme.colorScheme.surface
+                                ),
+                                elevation = CardDefaults.cardElevation(if (isSelected) 2.dp else 0.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    if (isSelected) {
+                                        Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                                    }
+                                    Spacer(Modifier.width(8.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text(task.title, style = MaterialTheme.typography.bodyMedium)
+                                        Text("预估 ${task.estimatedMinutes}min", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Start button
                 Button(
-                    onClick = { viewModel.startTimer() },
+                    onClick = { viewModel.startTimer(selectedTask?.id, selectedTask?.title) },
                     modifier = Modifier.size(80.dp),
                     shape = CircleShape
                 ) {
                     Icon(Icons.Default.PlayArrow, "开始", modifier = Modifier.size(36.dp))
                 }
             } else {
+                // Controls when running
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(24.dp),
                     verticalAlignment = Alignment.CenterVertically

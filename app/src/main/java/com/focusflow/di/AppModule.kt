@@ -121,8 +121,8 @@ object AppModule {
         GetTodayTasksUseCase(repo, assignmentDao)
 
     @Provides
-    fun provideCompleteTaskUseCase(repo: TaskRepository, sessionDao: StudySessionDao): CompleteTaskUseCase =
-        CompleteTaskUseCase(repo, sessionDao)
+    fun provideCompleteTaskUseCase(repo: TaskRepository, sessionDao: StudySessionDao, reviewRepo: ReviewRepository): CompleteTaskUseCase =
+        CompleteTaskUseCase(repo, sessionDao, reviewRepo)
 
     @Provides
     fun provideCalculateStreakUseCase(repo: StreakRepository): CalculateStreakUseCase =

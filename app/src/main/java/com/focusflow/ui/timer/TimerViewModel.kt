@@ -3,12 +3,15 @@ package com.focusflow.ui.timer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.focusflow.data.db.entity.StudySession
+import com.focusflow.data.db.entity.Task
 import com.focusflow.data.repository.SessionRepository
 import com.focusflow.data.repository.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -16,7 +19,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class TimerViewModel @Inject constructor(
-    private val sessionRepository: SessionRepository
+    private val sessionRepository: SessionRepository,
+    private val taskRepository: TaskRepository
 ) : ViewModel() {
 
     data class UiState(
@@ -24,14 +28,24 @@ class TimerViewModel @Inject constructor(
         val isPaused: Boolean = false,
         val elapsedSeconds: Int = 0,
         val currentTaskId: String? = null,
+        val currentTaskTitle: String? = null,
         val currentSessionId: String? = null,
-        val savedMinutes: Int = 0
+        val savedMinutes: Int = 0,
+        val availableTasks: List<Task> = emptyList()
     )
 
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
-    fun startTimer(taskId: String? = null) {
+    init {
+        viewModelScope.launch {
+            taskRepository.getRecommendedTasks().collect { tasks ->
+                _uiState.update { it.copy(availableTasks = tasks) }
+            }
+        }
+    }
+
+    fun startTimer(taskId: String? = null, taskTitle: String? = null) {
         val sessionId = UUID.randomUUID().toString()
         _uiState.update {
             it.copy(
@@ -39,6 +53,7 @@ class TimerViewModel @Inject constructor(
                 isPaused = false,
                 elapsedSeconds = 0,
                 currentTaskId = taskId,
+                currentTaskTitle = taskTitle,
                 currentSessionId = sessionId
             )
         }
@@ -64,6 +79,12 @@ class TimerViewModel @Inject constructor(
                     durationMinutes = state.elapsedSeconds / 60
                 )
                 sessionRepository.createSession(session)
+
+                // Update task actual minutes if linked to a task
+                if (!state.currentTaskId.isNullOrBlank()) {
+                    taskRepository.updateActualMinutes(state.currentTaskId, state.elapsedSeconds / 60)
+                }
+
                 _uiState.update {
                     it.copy(
                         savedMinutes = it.savedMinutes + state.elapsedSeconds / 60,
@@ -71,6 +92,7 @@ class TimerViewModel @Inject constructor(
                         isPaused = false,
                         elapsedSeconds = 0,
                         currentTaskId = null,
+                        currentTaskTitle = null,
                         currentSessionId = null
                     )
                 }

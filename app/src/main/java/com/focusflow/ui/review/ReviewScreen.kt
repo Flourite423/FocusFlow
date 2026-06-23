@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
@@ -32,7 +32,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.focusflow.data.db.entity.ReviewSchedule
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,10 +79,12 @@ fun ReviewScreen(
                     }
                 }
             } else {
-                items(uiState.dueReviews, key = { it.id }) { schedule ->
+                itemsIndexed(uiState.dueReviews) { _, item ->
                     ReviewCard(
-                        schedule = schedule,
-                        onMarkReviewed = { viewModel.markReviewed(schedule.id) }
+                        taskTitle = item.taskTitle,
+                        currentRound = item.schedule.currentRound,
+                        totalRounds = item.schedule.totalRounds,
+                        onMarkReviewed = { viewModel.markReviewed(item.schedule.id) }
                     )
                 }
             }
@@ -92,7 +93,7 @@ fun ReviewScreen(
 }
 
 @Composable
-private fun ReviewCard(schedule: ReviewSchedule, onMarkReviewed: () -> Unit) {
+private fun ReviewCard(taskTitle: String, currentRound: Int, totalRounds: Int, onMarkReviewed: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(1.dp)
@@ -102,9 +103,9 @@ private fun ReviewCard(schedule: ReviewSchedule, onMarkReviewed: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-                Text("任务 #${schedule.taskId.take(8)}", style = MaterialTheme.typography.bodyLarge)
+                Text(taskTitle, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                 Text(
-                    "第 ${schedule.currentRound + 1} 轮复习 / 共 ${schedule.totalRounds} 轮",
+                    "第 ${currentRound + 1} 轮复习 / 共 $totalRounds 轮",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
