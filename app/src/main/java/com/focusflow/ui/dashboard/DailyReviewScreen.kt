@@ -23,7 +23,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -31,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.focusflow.ui.theme.FocusFlowColors
 
 @Composable
 fun DailyReviewScreen(
@@ -65,19 +65,19 @@ fun DailyReviewScreen(
                 ) {
                     ReviewStatCard(
                         modifier = Modifier.weight(1f),
-                        icon = { Icon(Icons.Default.DateRange, null, tint = Color(0xFF3B82F6), modifier = Modifier.size(32.dp)) },
+                        icon = { Icon(Icons.Default.DateRange, null, tint = FocusFlowColors.planColor, modifier = Modifier.size(32.dp)) },
                         value = "${uiState.yesterdayMinutes}",
                         label = "学习分钟"
                     )
                     ReviewStatCard(
                         modifier = Modifier.weight(1f),
-                        icon = { Icon(Icons.Default.Star, null, tint = Color(0xFFF59E0B), modifier = Modifier.size(32.dp)) },
+                        icon = { Icon(Icons.Default.Star, null, tint = FocusFlowColors.streakColor, modifier = Modifier.size(32.dp)) },
                         value = "${uiState.yesterdayTasksCompleted}",
                         label = "完成任务"
                     )
                     ReviewStatCard(
                         modifier = Modifier.weight(1f),
-                        icon = { Icon(Icons.Default.Favorite, null, tint = Color(0xFFEF4444), modifier = Modifier.size(32.dp)) },
+                        icon = { Icon(Icons.Default.Favorite, null, tint = FocusFlowColors.timerColor, modifier = Modifier.size(32.dp)) },
                         value = "${uiState.currentStreak}",
                         label = "连续天数"
                     )
