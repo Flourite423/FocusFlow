@@ -1,15 +1,15 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin.serialization)
-    id("org.jetbrains.kotlin.plugin.compose")
+    alias(libs.plugins.kotlin.compose)
 }
 
 android {
     namespace = "com.focusflow"
     compileSdk = 35
+    buildToolsVersion = "36.0.0"
 
     defaultConfig {
         applicationId = "com.focusflow"
@@ -39,8 +39,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
     }
 
     buildFeatures {
@@ -63,6 +65,8 @@ dependencies {
     implementation(libs.compose.ui.graphics)
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
+    implementation(libs.compose.material.icons.core)
+    implementation(libs.compose.material.icons.extended)
     implementation(libs.compose.runtime)
     debugImplementation(libs.compose.ui.tooling)
 
@@ -76,7 +80,7 @@ dependencies {
 
     // Hilt (dependency injection)
     implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)                         // com.google.dagger:hilt-compiler
+    ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
 
     // Lifecycle + ViewModel
@@ -87,7 +91,7 @@ dependencies {
     // WorkManager + Hilt
     implementation(libs.work.runtime.ktx)
     implementation(libs.hilt.work)
-    ksp(libs.hilt.androidx.compiler)                // androidx.hilt:hilt-compiler
+    ksp(libs.hilt.androidx.compiler)
 
     // DataStore (user settings)
     implementation(libs.datastore.preferences)
