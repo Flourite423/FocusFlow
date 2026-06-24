@@ -18,6 +18,14 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
 
+enum class PomodoroPhase(val label: String, val durationMinutes: Int) {
+    WORK("专注", 25),
+    SHORT_BREAK("短休息", 5),
+    LONG_BREAK("长休息", 15);
+
+    val durationSeconds: Int get() = durationMinutes * 60
+}
+
 @HiltViewModel
 class TimerViewModel @Inject constructor(
     private val sessionRepository: SessionRepository,
@@ -27,9 +35,12 @@ class TimerViewModel @Inject constructor(
 ) : ViewModel() {
 
     data class UiState(
+        val phase: PomodoroPhase = PomodoroPhase.WORK,
         val isRunning: Boolean = false,
         val isPaused: Boolean = false,
-        val elapsedSeconds: Int = 0,
+        val remainingSeconds: Int = PomodoroPhase.WORK.durationSeconds,
+        val totalSeconds: Int = PomodoroPhase.WORK.durationSeconds,
+        val completedPomodoros: Int = 0,
         val currentTaskId: String? = null,
         val currentTaskTitle: String? = null,
         val currentSessionId: String? = null,
@@ -52,14 +63,16 @@ class TimerViewModel @Inject constructor(
     }
 
     fun startTimer(taskId: String? = null, taskTitle: String? = null) {
+        val phase = _uiState.value.phase
         _uiState.update {
             it.copy(
                 isRunning = true,
                 isPaused = false,
-                elapsedSeconds = 0,
+                remainingSeconds = phase.durationSeconds,
+                totalSeconds = phase.durationSeconds,
                 currentTaskId = taskId,
                 currentTaskTitle = taskTitle,
-                currentSessionId = UUID.randomUUID().toString()
+                currentSessionId = if (phase == PomodoroPhase.WORK) UUID.randomUUID().toString() else it.currentSessionId
             )
         }
     }
@@ -74,51 +87,126 @@ class TimerViewModel @Inject constructor(
 
     fun stopTimer() {
         val state = _uiState.value
-        if (state.elapsedSeconds > 0 && state.currentSessionId != null) {
-            viewModelScope.launch {
-                val stoppedMinutes = state.elapsedSeconds / 60
+        if (!state.isRunning) return
 
-                // Only persist session when a task is selected (StudySession.taskId has FK constraint)
-                if (!state.currentTaskId.isNullOrBlank()) {
+        // If in WORK phase, persist the session
+        if (state.phase == PomodoroPhase.WORK) {
+            val elapsedSeconds = state.totalSeconds - state.remainingSeconds
+            if (elapsedSeconds > 0) {
+                viewModelScope.launch {
+                    val minutes = elapsedSeconds / 60
+                    if (!state.currentTaskId.isNullOrBlank() && state.currentSessionId != null) {
+                        val session = StudySession(
+                            id = state.currentSessionId,
+                            taskId = state.currentTaskId,
+                            startTime = System.currentTimeMillis() - (elapsedSeconds * 1000L),
+                            endTime = System.currentTimeMillis(),
+                            durationMinutes = minutes
+                        )
+                        sessionRepository.createSession(session)
+                        taskRepository.updateActualMinutes(state.currentTaskId, minutes)
+                    }
+                    if (minutes > 0) {
+                        statsRepository.addStudyMinutes(todayEpoch(), minutes)
+                    }
+                }
+            }
+        }
+
+        _uiState.update {
+            it.copy(
+                isRunning = false,
+                isPaused = false,
+                remainingSeconds = it.phase.durationSeconds,
+                totalSeconds = it.phase.durationSeconds,
+                currentTaskId = null,
+                currentTaskTitle = null,
+                currentSessionId = null,
+                savedMinutes = it.savedMinutes + (state.totalSeconds - state.remainingSeconds) / 60
+            )
+        }
+    }
+
+    fun tick() {
+        val state = _uiState.value
+        if (!state.isRunning || state.isPaused) return
+
+        if (state.remainingSeconds > 0) {
+            _uiState.update { it.copy(remainingSeconds = it.remainingSeconds - 1) }
+        } else {
+            // Phase completed — auto-transition
+            onPhaseComplete()
+        }
+    }
+
+    private fun onPhaseComplete() {
+        val state = _uiState.value
+
+        if (state.phase == PomodoroPhase.WORK) {
+            // Persist work session
+            val minutes = state.totalSeconds / 60
+            if (!state.currentTaskId.isNullOrBlank() && state.currentSessionId != null) {
+                viewModelScope.launch {
                     val session = StudySession(
                         id = state.currentSessionId,
                         taskId = state.currentTaskId,
-                        startTime = System.currentTimeMillis() - (state.elapsedSeconds * 1000L),
+                        startTime = System.currentTimeMillis() - (state.totalSeconds * 1000L),
                         endTime = System.currentTimeMillis(),
-                        durationMinutes = stoppedMinutes
+                        durationMinutes = minutes
                     )
                     sessionRepository.createSession(session)
-                    taskRepository.updateActualMinutes(state.currentTaskId, stoppedMinutes)
+                    taskRepository.updateActualMinutes(state.currentTaskId, minutes)
+                    statsRepository.addStudyMinutes(todayEpoch(), minutes)
                 }
+            }
 
-                // Record study minutes in daily stats (works for both task-linked and free-form sessions)
-                if (stoppedMinutes > 0) {
-                    statsRepository.addStudyMinutes(todayEpoch(), stoppedMinutes)
-                }
+            val newCompleted = state.completedPomodoros + 1
+            val nextPhase = if (newCompleted % 4 == 0) PomodoroPhase.LONG_BREAK else PomodoroPhase.SHORT_BREAK
 
-
-                val stoppedTaskId = state.currentTaskId
-
-                _uiState.update {
-                    it.copy(
-                        savedMinutes = it.savedMinutes + stoppedMinutes,
-                        isRunning = false,
-                        isPaused = false,
-                        elapsedSeconds = 0,
-                        currentTaskId = null,
-                        currentTaskTitle = null,
-                        currentSessionId = null,
-                        // Show complete dialog if a task was selected
-                        showCompleteDialog = !stoppedTaskId.isNullOrBlank(),
-                        lastStoppedTaskId = stoppedTaskId,
-                        lastStoppedMinutes = stoppedMinutes
-                    )
-                }
+            _uiState.update {
+                it.copy(
+                    phase = nextPhase,
+                    isRunning = false,
+                    isPaused = false,
+                    remainingSeconds = nextPhase.durationSeconds,
+                    totalSeconds = nextPhase.durationSeconds,
+                    completedPomodoros = newCompleted,
+                    savedMinutes = it.savedMinutes + minutes,
+                    currentSessionId = null
+                )
             }
         } else {
+            // Break completed — back to WORK
             _uiState.update {
-                UiState(savedMinutes = it.savedMinutes)
+                it.copy(
+                    phase = PomodoroPhase.WORK,
+                    isRunning = false,
+                    isPaused = false,
+                    remainingSeconds = PomodoroPhase.WORK.durationSeconds,
+                    totalSeconds = PomodoroPhase.WORK.durationSeconds
+                )
             }
+        }
+    }
+
+    fun skipToNext() {
+        val state = _uiState.value
+        val nextPhase = when (state.phase) {
+            PomodoroPhase.WORK -> {
+                val newCompleted = state.completedPomodoros + 1
+                if (newCompleted % 4 == 0) PomodoroPhase.LONG_BREAK else PomodoroPhase.SHORT_BREAK
+            }
+            PomodoroPhase.SHORT_BREAK, PomodoroPhase.LONG_BREAK -> PomodoroPhase.WORK
+        }
+        _uiState.update {
+            it.copy(
+                phase = nextPhase,
+                isRunning = false,
+                isPaused = false,
+                remainingSeconds = nextPhase.durationSeconds,
+                totalSeconds = nextPhase.durationSeconds,
+                completedPomodoros = if (state.phase == PomodoroPhase.WORK) state.completedPomodoros + 1 else state.completedPomodoros
+            )
         }
     }
 
@@ -134,9 +222,5 @@ class TimerViewModel @Inject constructor(
         _uiState.update {
             it.copy(showCompleteDialog = false, lastStoppedTaskId = null, lastStoppedMinutes = 0)
         }
-    }
-
-    fun tick() {
-        _uiState.update { it.copy(elapsedSeconds = it.elapsedSeconds + 1) }
     }
 }
