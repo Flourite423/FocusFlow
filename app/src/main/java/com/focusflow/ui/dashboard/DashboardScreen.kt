@@ -24,8 +24,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Person
@@ -124,9 +126,9 @@ fun DashboardScreen(
             // Quick actions — 3-column grid
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    QuickActionChip(Modifier.weight(1f), "📋", "今日计划") { navController.navigate(Screen.DailyPlan.createRoute()) }
-                    QuickActionChip(Modifier.weight(1f), "📅", "周计划") { navController.navigate(Screen.WeeklyPlan.createRoute()) }
-                    QuickActionChip(Modifier.weight(1f), "📊", "回顾") { navController.navigate(Screen.DailyReview.createRoute()) }
+                    QuickActionChip(Modifier.weight(1f), Icons.Default.Star, "今日计划", FocusFlowColors.planColor) { navController.navigate(Screen.DailyPlan.createRoute()) }
+                    QuickActionChip(Modifier.weight(1f), Icons.Default.DateRange, "周计划", FocusFlowColors.reviewColor) { navController.navigate(Screen.WeeklyPlan.createRoute()) }
+                    QuickActionChip(Modifier.weight(1f), Icons.Default.CheckCircle, "回顾", FocusFlowColors.timerColor) { navController.navigate(Screen.DailyReview.createRoute()) }
                 }
             }
 
@@ -197,18 +199,19 @@ private fun MiniStatCard(accentColor: Color, value: String, label: String) {
 // === Quick action chip (compact) ===
 
 @Composable
-private fun QuickActionChip(modifier: Modifier, emoji: String, label: String, onClick: () -> Unit) {
+private fun QuickActionChip(modifier: Modifier, icon: ImageVector, label: String, tint: Color, onClick: () -> Unit) {
     Card(
         modifier = modifier.clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(1.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(vertical = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            Modifier.fillMaxWidth().height(64.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Text(emoji, fontSize = 20.sp)
-            Spacer(Modifier.height(4.dp))
+            Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.height(6.dp))
             Text(label, style = MaterialTheme.typography.labelMedium)
         }
     }
@@ -227,7 +230,7 @@ private fun EmptyTaskCard(onCreatePlan: () -> Unit) {
             Modifier.fillMaxWidth().padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("🎯", fontSize = 32.sp)
+            Icon(Icons.Default.Add, "创建计划", modifier = Modifier.size(36.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
             Spacer(Modifier.height(8.dp))
             Text("还没有今天的任务", style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(4.dp))
