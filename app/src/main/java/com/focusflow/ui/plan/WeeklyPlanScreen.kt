@@ -1,6 +1,10 @@
 package com.focusflow.ui.plan
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -119,8 +123,10 @@ private fun DayCard(
     onToggleSelect: () -> Unit,
     onRemoveTask: (String) -> Unit
 ) {
+    var isExpanded by remember { mutableStateOf(isToday) }
+
     Card(
-        modifier = Modifier.fillMaxWidth().clickable { onToggleSelect() },
+        modifier = Modifier.fillMaxWidth().clickable { isExpanded = !isExpanded },
         elevation = CardDefaults.cardElevation(if (isToday || isSelected) 3.dp else 1.dp),
         colors = when {
             isSelected -> CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
@@ -129,7 +135,7 @@ private fun DayCard(
         }
     ) {
         Column(Modifier.fillMaxWidth().padding(16.dp)) {
-            // Header
+            // Header — always visible
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.DateRange, null, modifier = Modifier.size(18.dp),
                     tint = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer else FocusFlowColors.planColor)
@@ -138,46 +144,51 @@ private fun DayCard(
                     fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
                     color = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.weight(1f))
-                Text("${tasks.size} 个任务", style = MaterialTheme.typography.bodyMedium,
+                Text("${tasks.size}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold,
                     color = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.width(8.dp))
                 SmallFloatingActionButton(
                     onClick = onToggleSelect,
+                    modifier = Modifier.size(32.dp),
                     containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
                 ) {
-                    Icon(Icons.Default.Add, "添加任务", modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Add, "添加任务", modifier = Modifier.size(14.dp))
                 }
             }
 
-            // Task list
-            if (tasks.isNotEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                tasks.forEach { task ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
-                    ) {
-                        Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(14.dp),
-                            tint = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
-                        Spacer(Modifier.width(8.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(task.taskTitle, style = MaterialTheme.typography.bodySmall,
-                                color = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("${task.planName} · ${task.milestoneTitle}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant)
+            // Task list — only when expanded
+            AnimatedVisibility(visible = isExpanded) {
+                Column {
+                    if (tasks.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        tasks.forEach { task ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
+                            ) {
+                                Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(14.dp),
+                                    tint = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                                Spacer(Modifier.width(8.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(task.taskTitle, style = MaterialTheme.typography.bodySmall,
+                                        color = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text("${task.planName} · ${task.milestoneTitle}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                IconButton(onClick = { onRemoveTask(task.taskId) }, modifier = Modifier.size(24.dp)) {
+                                    Icon(Icons.Default.Close, "移除", modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f))
+                                }
+                            }
                         }
-                        IconButton(onClick = { onRemoveTask(task.taskId) }, modifier = Modifier.size(24.dp)) {
-                            Icon(Icons.Default.Close, "移除", modifier = Modifier.size(14.dp),
-                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f))
-                        }
+                    } else {
+                        Spacer(Modifier.height(4.dp))
+                        Text("暂无任务", style = MaterialTheme.typography.bodySmall,
+                            color = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-            } else {
-                Spacer(Modifier.height(4.dp))
-                Text("暂无任务", style = MaterialTheme.typography.bodySmall,
-                    color = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

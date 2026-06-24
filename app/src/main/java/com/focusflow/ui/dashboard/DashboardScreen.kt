@@ -1,5 +1,11 @@
 package com.focusflow.ui.dashboard
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -41,8 +47,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -102,47 +110,46 @@ fun DashboardScreen(
                 Text("今天也要加油学习哦", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
-            // Stats row
+            // Stats row — primary metric (streak) is larger
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StatCard(Modifier.weight(1f), { Icon(Icons.Default.Favorite, null, tint = FocusFlowColors.streakColor) }, "${uiState.streakDays}", "连续天数")
-                    StatCard(Modifier.weight(1f), { Icon(Icons.Default.DateRange, null, tint = FocusFlowColors.planColor) }, "${uiState.todayMinutes}min", "今日学习")
-                    StatCard(Modifier.weight(1f), { Icon(Icons.Default.CheckCircle, null, tint = FocusFlowColors.timerColor) }, "${uiState.completedTasks}/${uiState.totalTasks}", "今日任务")
+                    PrimaryStatCard(Modifier.weight(1.3f), uiState.streakDays)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        MiniStatCard(FocusFlowColors.planColor, "${uiState.todayMinutes}min", "今日学习")
+                        MiniStatCard(FocusFlowColors.timerColor, "${uiState.completedTasks}/${uiState.totalTasks}", "今日任务")
+                    }
                 }
             }
 
-            // Quick actions
+            // Quick actions — 3-column grid
             item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    QuickActionCard(Modifier.weight(1f), { Icon(Icons.Default.Star, null, tint = FocusFlowColors.streakColor) }, "今日计划", "查看今天的任务") { navController.navigate(Screen.DailyPlan.createRoute()) }
-                    QuickActionCard(Modifier.weight(1f), { Icon(Icons.Default.DateRange, null, tint = FocusFlowColors.reviewColor) }, "周计划", "查看本周安排") { navController.navigate(Screen.WeeklyPlan.createRoute()) }
-                }
-            }
-            // Daily review quick action
-            item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    QuickActionCard(Modifier.weight(1f), { Icon(Icons.Default.CheckCircle, null, tint = FocusFlowColors.timerColor) }, "每日回顾", "查看昨日学习统计") { navController.navigate(Screen.DailyReview.createRoute()) }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    QuickActionChip(Modifier.weight(1f), "📋", "今日计划") { navController.navigate(Screen.DailyPlan.createRoute()) }
+                    QuickActionChip(Modifier.weight(1f), "📅", "周计划") { navController.navigate(Screen.WeeklyPlan.createRoute()) }
+                    QuickActionChip(Modifier.weight(1f), "📊", "回顾") { navController.navigate(Screen.DailyReview.createRoute()) }
                 }
             }
 
             // Today's tasks
             item { Text("今日任务", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
-            if (uiState.todayTasks.isEmpty()) {
+            if (uiState.todayTasks.isEmpty() && uiState.todayAssignments.isEmpty()) {
                 item {
-                    Card(Modifier.fillMaxWidth()) {
-                        Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                            Text("暂无任务，去计划页面创建", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
+                    EmptyTaskCard(onCreatePlan = { navController.navigate(Screen.PlanList.createRoute()) })
                 }
             } else {
                 items(uiState.todayAssignments.size) { index ->
                     val assignment = uiState.todayAssignments[index]
-                    TaskRowWithPlan(taskTitle = assignment.taskTitle, planName = assignment.planName, estimatedMinutes = assignment.estimatedMinutes, isDone = uiState.todayTasks.any { it.id == assignment.taskId && it.status.value == "done" })
+                    val isDone = uiState.todayTasks.any { it.id == assignment.taskId && it.status.value == "done" }
+                    AnimatedTaskRow(
+                        taskTitle = assignment.taskTitle,
+                        planName = assignment.planName,
+                        estimatedMinutes = assignment.estimatedMinutes,
+                        isDone = isDone
+                    )
                 }
             }
 
-            // Heatmap
+            // Heatmap with legend
             item { Text("学习热力图", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
             item { HeatmapGrid(uiState.heatmapData, isDark) }
         }
@@ -151,51 +158,133 @@ fun DashboardScreen(
     if (showOnboarding) { OnboardingGuide(onDismiss = { showOnboarding = false }) }
 }
 
+// === Primary stat card (larger, prominent) ===
+
 @Composable
-private fun StatCard(modifier: Modifier, icon: @Composable () -> Unit, value: String, label: String) {
-    Card(modifier = modifier, elevation = CardDefaults.cardElevation(2.dp)) {
-        Column(Modifier.fillMaxWidth().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            icon(); Spacer(Modifier.height(4.dp))
-            Text(value, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+private fun PrimaryStatCard(modifier: Modifier, streakDays: Int) {
+    Card(
+        modifier = modifier,
+        elevation = CardDefaults.cardElevation(3.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(Icons.Default.Favorite, null, tint = FocusFlowColors.streakColor, modifier = Modifier.size(28.dp))
+            Spacer(Modifier.height(8.dp))
+            Text("$streakDays", fontSize = 36.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            Text("连续天数", fontSize = 13.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+        }
+    }
+}
+
+// === Mini stat cards (secondary metrics) ===
+
+@Composable
+private fun MiniStatCard(accentColor: Color, value: String, label: String) {
+    Card(elevation = CardDefaults.cardElevation(1.dp)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(8.dp).clip(CircleShape).background(accentColor))
+            Spacer(Modifier.width(8.dp))
+            Text(value, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.width(4.dp))
             Text(label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
+// === Quick action chip (compact) ===
+
 @Composable
-private fun QuickActionCard(modifier: Modifier, icon: @Composable () -> Unit, title: String, subtitle: String, onClick: () -> Unit) {
-    Card(modifier = modifier.clickable(onClick = onClick), elevation = CardDefaults.cardElevation(1.dp)) {
-        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            icon(); Spacer(Modifier.width(8.dp))
-            Column {
-                Text(title, style = MaterialTheme.typography.titleSmall)
-                Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+private fun QuickActionChip(modifier: Modifier, emoji: String, label: String, onClick: () -> Unit) {
+    Card(
+        modifier = modifier.clickable(onClick = onClick),
+        elevation = CardDefaults.cardElevation(1.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(emoji, fontSize = 20.sp)
+            Spacer(Modifier.height(4.dp))
+            Text(label, style = MaterialTheme.typography.labelMedium)
         }
     }
 }
 
-@Composable
-private fun TaskRow(task: Task) {
-    TaskRowWithPlan(taskTitle = task.title, planName = null, estimatedMinutes = task.estimatedMinutes, isDone = task.status.value == "done")
-}
+// === Empty state card ===
 
 @Composable
-private fun TaskRowWithPlan(taskTitle: String, planName: String?, estimatedMinutes: Int, isDone: Boolean) {
-    Card(Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(1.dp)) {
+private fun EmptyTaskCard(onCreatePlan: () -> Unit) {
+    Card(
+        Modifier.fillMaxWidth().clickable(onClick = onCreatePlan),
+        elevation = CardDefaults.cardElevation(1.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("🎯", fontSize = 32.sp)
+            Spacer(Modifier.height(8.dp))
+            Text("还没有今天的任务", style = MaterialTheme.typography.titleSmall)
+            Spacer(Modifier.height(4.dp))
+            Text("点击创建你的第一个学习计划", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+// === Animated task row with strikethrough ===
+
+@Composable
+private fun AnimatedTaskRow(taskTitle: String, planName: String?, estimatedMinutes: Int, isDone: Boolean) {
+    val bgColor by animateColorAsState(
+        targetValue = if (isDone) FocusFlowColors.timerColor.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface,
+        animationSpec = tween(400),
+        label = "taskBg"
+    )
+    val dotScale by animateFloatAsState(
+        targetValue = if (isDone) 1.3f else 1f,
+        animationSpec = tween(300),
+        label = "dotScale"
+    )
+
+    Card(
+        Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(if (isDone) 0.dp else 1.dp),
+        colors = CardDefaults.cardColors(containerColor = bgColor)
+    ) {
         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(12.dp).clip(CircleShape).background(if (isDone) FocusFlowColors.timerColor else MaterialTheme.colorScheme.outline))
+            Box(
+                Modifier.size(12.dp).scale(dotScale).clip(CircleShape)
+                    .background(if (isDone) FocusFlowColors.timerColor else MaterialTheme.colorScheme.outline)
+            )
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(taskTitle, style = MaterialTheme.typography.bodyLarge, color = if (isDone) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
-                if (planName != null) {
-                    Text(planName, style = MaterialTheme.typography.labelSmall, color = FocusFlowColors.planColor.copy(alpha = 0.8f))
+                Text(
+                    taskTitle,
+                    style = MaterialTheme.typography.bodyLarge,
+                    textDecoration = if (isDone) TextDecoration.LineThrough else TextDecoration.None,
+                    color = if (isDone) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
+                )
+                Row {
+                    if (planName != null) {
+                        Text(planName, style = MaterialTheme.typography.labelSmall, color = FocusFlowColors.planColor.copy(alpha = 0.8f))
+                        Text(" · ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Text("${estimatedMinutes}min", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Text("预估 ${estimatedMinutes}min", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            AnimatedVisibility(visible = isDone, enter = fadeIn(), exit = fadeOut()) {
+                Icon(Icons.Default.CheckCircle, "已完成", tint = FocusFlowColors.timerColor, modifier = Modifier.size(20.dp))
             }
         }
     }
 }
+
+// === Heatmap with legend ===
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -232,6 +321,26 @@ private fun HeatmapGrid(data: Map<Long, Int>, isDark: Boolean) {
                     }
                     Box(Modifier.size(12.dp).clip(RoundedCornerShape(2.dp)).background(color))
                 }
+            }
+
+            // Color legend
+            Spacer(Modifier.height(10.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                Text("少", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.width(4.dp))
+                val legendColors = if (isDark) listOf(
+                    FocusFlowColors.heatmapEmptyDark, FocusFlowColors.heatmapLowDark,
+                    FocusFlowColors.heatmapMediumDark, FocusFlowColors.heatmapHighDark, FocusFlowColors.heatmapMaxDark
+                ) else listOf(
+                    FocusFlowColors.heatmapEmpty, FocusFlowColors.heatmapLow,
+                    FocusFlowColors.heatmapMedium, FocusFlowColors.heatmapHigh, FocusFlowColors.heatmapMax
+                )
+                legendColors.forEach { c ->
+                    Box(Modifier.size(12.dp).clip(RoundedCornerShape(2.dp)).background(c))
+                    Spacer(Modifier.width(3.dp))
+                }
+                Spacer(Modifier.width(4.dp))
+                Text("多", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

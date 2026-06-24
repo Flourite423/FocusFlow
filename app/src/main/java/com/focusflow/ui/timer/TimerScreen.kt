@@ -1,5 +1,8 @@
 package com.focusflow.ui.timer
 
+import android.media.AudioManager
+import android.media.ToneGenerator
+
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -64,6 +67,14 @@ import com.focusflow.ui.theme.Violet400
 import com.focusflow.ui.theme.Violet500
 import kotlinx.coroutines.delay
 
+private fun playPhaseCompleteSound() {
+    try {
+        val tg = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
+        tg.startTone(ToneGenerator.TONE_PROP_ACK, 200)
+        tg.release()
+    } catch (_: Exception) { }
+}
+
 @Composable
 fun TimerScreen(
     navController: NavController,
@@ -77,6 +88,15 @@ fun TimerScreen(
             delay(1000)
             viewModel.tick()
         }
+    }
+
+    // Play sound when phase countdown hits zero
+    var prevRemaining by remember { mutableStateOf(uiState.remainingSeconds) }
+    LaunchedEffect(uiState.remainingSeconds, uiState.phase) {
+        if (prevRemaining == 1 && uiState.remainingSeconds == 0) {
+            playPhaseCompleteSound()
+        }
+        prevRemaining = uiState.remainingSeconds
     }
 
     val phaseColor = when (uiState.phase) {
