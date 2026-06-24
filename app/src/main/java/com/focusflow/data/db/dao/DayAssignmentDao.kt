@@ -18,6 +18,19 @@ data class AssignmentWithTitle(
     val taskTitle: String
 )
 
+data class AssignmentWithFullInfo(
+    val id: String,
+    val taskId: String,
+    val date: Long,
+    val order: Int,
+    val isTemporary: Boolean,
+    val createdAt: Long,
+    val taskTitle: String,
+    val estimatedMinutes: Int,
+    val planName: String,
+    val milestoneTitle: String
+)
+
 @Dao
 interface DayAssignmentDao {
     @Query("SELECT * FROM day_assignments WHERE date = :date ORDER BY \"order\" ASC")
@@ -34,6 +47,18 @@ interface DayAssignmentDao {
         ORDER BY da.date ASC, da.`order` ASC
     """)
     fun getAssignmentsWithTitles(weekStart: Long, weekEnd: Long): Flow<List<AssignmentWithTitle>>
+
+    @Query("""
+        SELECT da.id, da.taskId, da.date, da.`order`, da.isTemporary, da.createdAt,
+               t.title AS taskTitle, t.estimatedMinutes, p.title AS planName, m.title AS milestoneTitle
+        FROM day_assignments da
+        INNER JOIN tasks t ON t.id = da.taskId
+        INNER JOIN milestones m ON m.id = t.milestoneId
+        INNER JOIN plans p ON p.id = m.planId
+        WHERE da.date BETWEEN :weekStart AND :weekEnd
+        ORDER BY da.date ASC, da.`order` ASC
+    """)
+    fun getAssignmentsWithFullInfo(weekStart: Long, weekEnd: Long): Flow<List<AssignmentWithFullInfo>>
 
     @Query("SELECT COUNT(*) FROM day_assignments WHERE date = :date")
     fun getCountForDate(date: Long): Flow<Int>

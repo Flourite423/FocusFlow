@@ -1,6 +1,8 @@
 package com.focusflow.data.repository
 
 import com.focusflow.data.db.dao.AssignmentWithTitle
+import com.focusflow.data.db.dao.AssignmentWithFullInfo
+import com.focusflow.data.db.dao.TaskWithPlanInfo
 import com.focusflow.data.db.dao.DayAssignmentDao
 import com.focusflow.data.db.dao.TaskDao
 import com.focusflow.data.db.entity.DayAssignment
@@ -25,6 +27,15 @@ class TaskRepository @Inject constructor(
 
     fun getAssignmentsWithTitles(weekStart: Long, weekEnd: Long): Flow<List<AssignmentWithTitle>> =
         assignmentDao.getAssignmentsWithTitles(weekStart, weekEnd)
+
+    fun getActiveTasksWithPlanInfo(): Flow<List<TaskWithPlanInfo>> = taskDao.getActiveTasksWithPlanInfo()
+
+    fun getUnassignedTasksForDate(date: Long): Flow<List<TaskWithPlanInfo>> = taskDao.getUnassignedTasksForDate(date)
+
+    fun getAssignmentsWithFullInfo(weekStart: Long, weekEnd: Long): Flow<List<AssignmentWithFullInfo>> =
+        assignmentDao.getAssignmentsWithFullInfo(weekStart, weekEnd)
+
+    suspend fun removeTaskFromDate(taskId: String, date: Long) = assignmentDao.removeTaskFromDate(taskId, date)
 
     suspend fun updateTaskStatus(id: String, status: TaskStatus, completedAt: Long? = null) {
         val now = System.currentTimeMillis()

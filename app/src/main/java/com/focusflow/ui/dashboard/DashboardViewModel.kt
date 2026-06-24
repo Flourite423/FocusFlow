@@ -2,6 +2,7 @@ package com.focusflow.ui.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.focusflow.data.db.dao.AssignmentWithFullInfo
 import com.focusflow.data.db.entity.Task
 import com.focusflow.data.repository.SessionRepository
 import com.focusflow.data.repository.StatsRepository
@@ -10,6 +11,8 @@ import com.focusflow.data.repository.TaskRepository
 import com.focusflow.util.todayStart
 import com.focusflow.util.todayEnd
 import com.focusflow.util.todayEpoch
+import com.focusflow.util.weekStart
+import com.focusflow.util.weekEnd
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +32,7 @@ class DashboardViewModel @Inject constructor(
         val streakDays: Int = 0,
         val todayMinutes: Int = 0,
         val todayTasks: List<Task> = emptyList(),
+        val todayAssignments: List<AssignmentWithFullInfo> = emptyList(),
         val completedTasks: Int = 0,
         val totalTasks: Int = 0,
         val heatmapData: Map<Long, Int> = emptyMap()
@@ -38,12 +42,14 @@ class DashboardViewModel @Inject constructor(
         streakRepository.observeStreak(),
         sessionRepository.getTotalMinutesForDay(todayStart(), todayEnd()),
         taskRepository.getTasksForDate(todayEpoch()),
-        statsRepository.getHeatmapData(16)
-    ) { streak, minutes, tasks, heatmap ->
+        statsRepository.getHeatmapData(16),
+        taskRepository.getAssignmentsWithFullInfo(todayEpoch(), todayEpoch())
+    ) { streak, minutes, tasks, heatmap, assignments ->
         UiState(
             streakDays = streak,
             todayMinutes = minutes,
             todayTasks = tasks,
+            todayAssignments = assignments,
             completedTasks = tasks.count { it.status.value == "done" },
             totalTasks = tasks.size,
             heatmapData = heatmap

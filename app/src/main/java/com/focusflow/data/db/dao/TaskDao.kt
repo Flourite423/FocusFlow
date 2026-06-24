@@ -5,8 +5,21 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import com.focusflow.data.db.entity.Priority
 import com.focusflow.data.db.entity.Task
+import com.focusflow.data.db.entity.TaskStatus
 import kotlinx.coroutines.flow.Flow
+
+data class TaskWithPlanInfo(
+    val id: String,
+    val milestoneId: String,
+    val title: String,
+    val status: TaskStatus,
+    val priority: Priority,
+    val estimatedMinutes: Int,
+    val planName: String,
+    val milestoneTitle: String
+)
 
 @Dao
 interface TaskDao {
@@ -48,6 +61,29 @@ interface TaskDao {
     """)
     fun getTodayRecommended(today: Long): Flow<List<Task>>
 
+    @Query("""
+        SELECT t.id, t.milestoneId, t.title, t.status, t.priority, t.estimatedMinutes,
+               p.title AS planName, m.title AS milestoneTitle
+        FROM tasks t
+        INNER JOIN milestones m ON m.id = t.milestoneId
+        INNER JOIN plans p ON p.id = m.planId
+        WHERE p.status = 'active' AND t.status IN ('todo', 'in_progress')
+        ORDER BY p.title ASC, m."order" ASC, t.priority DESC
+    """)
+    fun getActiveTasksWithPlanInfo(): Flow<List<TaskWithPlanInfo>>
+
+    @Query("""
+        SELECT t.id, t.milestoneId, t.title, t.status, t.priority, t.estimatedMinutes,
+               p.title AS planName, m.title AS milestoneTitle
+        FROM tasks t
+        INNER JOIN milestones m ON m.id = t.milestoneId
+        INNER JOIN plans p ON p.id = m.planId
+        WHERE p.status = 'active' AND t.status IN ('todo', 'in_progress')
+          AND t.id NOT IN (SELECT da.taskId FROM day_assignments da WHERE da.date = :date)
+        ORDER BY p.title ASC, m."order" ASC, t.priority DESC
+    """)
+    fun getUnassignedTasksForDate(date: Long): Flow<List<TaskWithPlanInfo>>
+
     @Query("SELECT COUNT(*) FROM tasks WHERE milestoneId = :milestoneId AND status = 'done'")
     fun getCompletedCount(milestoneId: String): Flow<Int>
 
@@ -77,6 +113,7 @@ interface TaskDao {
 
     @Query("DELETE FROM tasks WHERE id = :id")
     suspend fun deleteById(id: String)
+
     @Query("DELETE FROM tasks")
     suspend fun deleteAll()
 }

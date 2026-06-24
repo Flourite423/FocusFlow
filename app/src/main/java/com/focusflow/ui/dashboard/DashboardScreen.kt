@@ -136,7 +136,10 @@ fun DashboardScreen(
                     }
                 }
             } else {
-                items(uiState.todayTasks.size) { index -> TaskRow(uiState.todayTasks[index]) }
+                items(uiState.todayAssignments.size) { index ->
+                    val assignment = uiState.todayAssignments[index]
+                    TaskRowWithPlan(taskTitle = assignment.taskTitle, planName = assignment.planName, estimatedMinutes = assignment.estimatedMinutes, isDone = uiState.todayTasks.any { it.id == assignment.taskId && it.status.value == "done" })
+                }
             }
 
             // Heatmap
@@ -174,14 +177,21 @@ private fun QuickActionCard(modifier: Modifier, icon: @Composable () -> Unit, ti
 
 @Composable
 private fun TaskRow(task: Task) {
+    TaskRowWithPlan(taskTitle = task.title, planName = null, estimatedMinutes = task.estimatedMinutes, isDone = task.status.value == "done")
+}
+
+@Composable
+private fun TaskRowWithPlan(taskTitle: String, planName: String?, estimatedMinutes: Int, isDone: Boolean) {
     Card(Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(1.dp)) {
         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            val isDone = task.status.value == "done"
             Box(Modifier.size(12.dp).clip(CircleShape).background(if (isDone) FocusFlowColors.timerColor else MaterialTheme.colorScheme.outline))
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(task.title, style = MaterialTheme.typography.bodyLarge, color = if (isDone) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
-                Text("预估 ${task.estimatedMinutes}min", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(taskTitle, style = MaterialTheme.typography.bodyLarge, color = if (isDone) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
+                if (planName != null) {
+                    Text(planName, style = MaterialTheme.typography.labelSmall, color = FocusFlowColors.planColor.copy(alpha = 0.8f))
+                }
+                Text("预估 ${estimatedMinutes}min", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
