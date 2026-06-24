@@ -32,6 +32,27 @@ interface DailyStatsDao {
     @Query("UPDATE daily_stats SET totalMinutes = :totalMinutes, tasksCompleted = :tasksCompleted, reviewsDone = :reviewsDone, streakDays = :streakDays, updatedAt = :updatedAt WHERE date = :date")
     suspend fun update(date: Long, totalMinutes: Int, tasksCompleted: Int, reviewsDone: Int, streakDays: Int, updatedAt: Long)
 
+    @Query("""
+        INSERT INTO daily_stats (date, totalMinutes, tasksCompleted, reviewsDone, streakDays, updatedAt)
+        VALUES (:date, :minutes, 0, 0, 0, :now)
+        ON CONFLICT(date) DO UPDATE SET totalMinutes = totalMinutes + :minutes, updatedAt = :now
+    """)
+    suspend fun addStudyMinutes(date: Long, minutes: Int, now: Long = System.currentTimeMillis())
+
+    @Query("""
+        INSERT INTO daily_stats (date, totalMinutes, tasksCompleted, reviewsDone, streakDays, updatedAt)
+        VALUES (:date, 0, 1, 0, 0, :now)
+        ON CONFLICT(date) DO UPDATE SET tasksCompleted = tasksCompleted + 1, updatedAt = :now
+    """)
+    suspend fun incrementTasksCompleted(date: Long, now: Long = System.currentTimeMillis())
+
+    @Query("""
+        INSERT INTO daily_stats (date, totalMinutes, tasksCompleted, reviewsDone, streakDays, updatedAt)
+        VALUES (:date, 0, 0, 1, 0, :now)
+        ON CONFLICT(date) DO UPDATE SET reviewsDone = reviewsDone + 1, updatedAt = :now
+    """)
+    suspend fun incrementReviewsDone(date: Long, now: Long = System.currentTimeMillis())
+
     @Delete
     suspend fun delete(stats: DailyStats)
 

@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.focusflow.data.db.entity.StudySession
 import com.focusflow.data.db.entity.Task
 import com.focusflow.data.repository.SessionRepository
+import com.focusflow.data.repository.StatsRepository
+import com.focusflow.util.todayEpoch
 import com.focusflow.data.repository.TaskRepository
 import com.focusflow.domain.usecase.CompleteTaskUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,7 +22,8 @@ import javax.inject.Inject
 class TimerViewModel @Inject constructor(
     private val sessionRepository: SessionRepository,
     private val taskRepository: TaskRepository,
-    private val completeTaskUseCase: CompleteTaskUseCase
+    private val completeTaskUseCase: CompleteTaskUseCase,
+    private val statsRepository: StatsRepository
 ) : ViewModel() {
 
     data class UiState(
@@ -73,21 +76,27 @@ class TimerViewModel @Inject constructor(
         val state = _uiState.value
         if (state.elapsedSeconds > 0 && state.currentSessionId != null) {
             viewModelScope.launch {
-                val session = StudySession(
-                    id = state.currentSessionId,
-                    taskId = state.currentTaskId ?: "",
-                    startTime = System.currentTimeMillis() - (state.elapsedSeconds * 1000L),
-                    endTime = System.currentTimeMillis(),
-                    durationMinutes = state.elapsedSeconds / 60
-                )
-                sessionRepository.createSession(session)
+                val stoppedMinutes = state.elapsedSeconds / 60
 
-                // Update task actual minutes if linked to a task
+                // Only persist session when a task is selected (StudySession.taskId has FK constraint)
                 if (!state.currentTaskId.isNullOrBlank()) {
-                    taskRepository.updateActualMinutes(state.currentTaskId, state.elapsedSeconds / 60)
+                    val session = StudySession(
+                        id = state.currentSessionId,
+                        taskId = state.currentTaskId,
+                        startTime = System.currentTimeMillis() - (state.elapsedSeconds * 1000L),
+                        endTime = System.currentTimeMillis(),
+                        durationMinutes = stoppedMinutes
+                    )
+                    sessionRepository.createSession(session)
+                    taskRepository.updateActualMinutes(state.currentTaskId, stoppedMinutes)
                 }
 
-                val stoppedMinutes = state.elapsedSeconds / 60
+                // Record study minutes in daily stats (works for both task-linked and free-form sessions)
+                if (stoppedMinutes > 0) {
+                    statsRepository.addStudyMinutes(todayEpoch(), stoppedMinutes)
+                }
+
+
                 val stoppedTaskId = state.currentTaskId
 
                 _uiState.update {

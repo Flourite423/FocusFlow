@@ -115,6 +115,6 @@ object AppModule {
     fun provideBackupManager(db: FocusFlowDatabase): BackupManager = BackupManager(db)
 
     @Provides
-    fun provideCompleteTaskUseCase(taskRepo: TaskRepository, sessionRepo: SessionRepository, reviewRepo: ReviewRepository): CompleteTaskUseCase =
-        CompleteTaskUseCase(taskRepo, sessionRepo, reviewRepo)
+    fun provideCompleteTaskUseCase(taskRepo: TaskRepository, sessionRepo: SessionRepository, reviewRepo: ReviewRepository, statsRepo: StatsRepository): CompleteTaskUseCase =
+        CompleteTaskUseCase(taskRepo, sessionRepo, reviewRepo, statsRepo)
 }

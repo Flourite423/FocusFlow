@@ -30,4 +30,9 @@ class StatsRepository @Inject constructor(
     fun getRecentStats(limit: Int = 30): Flow<List<DailyStats>> = statsDao.getRecent(limit)
 
     suspend fun upsertDailyStats(stats: DailyStats) = statsDao.upsert(stats)
+    suspend fun addStudyMinutes(date: Long, minutes: Int) = statsDao.addStudyMinutes(date, minutes)
+
+    suspend fun recordTaskCompleted(date: Long) = statsDao.incrementTasksCompleted(date)
+
+    suspend fun recordReviewDone(date: Long) = statsDao.incrementReviewsDone(date)
 }

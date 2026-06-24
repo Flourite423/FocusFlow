@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import com.focusflow.data.db.dao.DailyStatsDao
+import com.focusflow.util.toLocalDate
 import com.focusflow.util.toEpochMillis
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -51,12 +52,25 @@ class StreakRepository @Inject constructor(
         val freezeLimit = preferences[freezeLimitKey] ?: 2
         var streak = 0
         var freezesRemaining = freezeLimit - freezeUsedThisMonth
+        var expectedDate = LocalDate.now()
+
         for (stats in statsList) {
+            val statsDate = stats.date.toLocalDate()
+            // Gap between expected and actual date — use freezes to bridge
+            val gap = java.time.temporal.ChronoUnit.DAYS.between(statsDate, expectedDate).toInt()
+            if (gap > 0) {
+                if (gap <= freezesRemaining) {
+                    freezesRemaining -= gap
+                } else {
+                    break
+                }
+            }
             when {
                 stats.totalMinutes >= MIN_STREAK_MINUTES -> streak++
                 freezesRemaining > 0 -> freezesRemaining--
                 else -> break
             }
+            expectedDate = statsDate.minusDays(1)
         }
         streak
     }

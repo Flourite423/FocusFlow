@@ -44,7 +44,8 @@ class ReviewRepository @Inject constructor(
 
     suspend fun markReviewed(scheduleId: String) {
         val schedule = scheduleDao.getById(scheduleId) ?: return
-        val intervals = schedule.reviewIntervals.split(",").map { it.trim().toInt() }
+        val intervals = schedule.reviewIntervals.split(",").mapNotNull { it.trim().toIntOrNull() }
+        if (intervals.isEmpty()) return
         val nextRound = schedule.currentRound + 1
         val nextDate = if (nextRound < intervals.size) {
             LocalDate.now().plusDays(intervals[nextRound].toLong()).toEpochMillis()

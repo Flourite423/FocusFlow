@@ -118,6 +118,12 @@ fun DashboardScreen(
                     QuickActionCard(Modifier.weight(1f), { Icon(Icons.Default.DateRange, null, tint = FocusFlowColors.reviewColor) }, "周计划", "查看本周安排") { navController.navigate(Screen.WeeklyPlan.createRoute()) }
                 }
             }
+            // Daily review quick action
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    QuickActionCard(Modifier.weight(1f), { Icon(Icons.Default.CheckCircle, null, tint = FocusFlowColors.timerColor) }, "每日回顾", "查看昨日学习统计") { navController.navigate(Screen.DailyReview.createRoute()) }
+                }
+            }
 
             // Today's tasks
             item { Text("今日任务", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }

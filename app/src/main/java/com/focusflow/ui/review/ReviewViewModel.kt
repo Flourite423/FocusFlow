@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.focusflow.data.db.entity.ReviewSchedule
 import com.focusflow.data.repository.ReviewRepository
+import com.focusflow.data.repository.StatsRepository
+import com.focusflow.util.todayEpoch
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -14,7 +16,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ReviewViewModel @Inject constructor(
-    private val reviewRepository: ReviewRepository
+    private val reviewRepository: ReviewRepository,
+    private val statsRepository: StatsRepository
 ) : ViewModel() {
 
     data class ReviewItem(
@@ -41,6 +44,7 @@ class ReviewViewModel @Inject constructor(
     fun markReviewed(scheduleId: String) {
         viewModelScope.launch {
             reviewRepository.markReviewed(scheduleId)
+            statsRepository.recordReviewDone(todayEpoch())
         }
     }
 }
