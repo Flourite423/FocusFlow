@@ -2,144 +2,155 @@ package com.focusflow.ui.theme
 
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-// Flat Colorful Palette — vibrant but not overwhelming
-// Each functional area has its own color identity
+// === Fresh Gradient Palette — Notion/Linear inspired ===
 
-// Primary colors
-val Blue500 = Color(0xFF3B82F6)
-val Blue600 = Color(0xFF2563EB)
-val Blue100 = Color(0xFFDBEAFE)
-val Blue900 = Color(0xFF1E3A5F)
+// Primary: Soft indigo-violet
+val Indigo400 = Color(0xFF818CF8)
+val Indigo500 = Color(0xFF6366F1)
+val Indigo600 = Color(0xFF4F46E5)
+val Indigo100 = Color(0xFFE0E7FF)
+val Indigo50 = Color(0xFFEEF2FF)
+val Indigo900 = Color(0xFF312E81)
 
-// Accent colors for functional areas
-val Green500 = Color(0xFF22C55E)
-val Green600 = Color(0xFF16A34A)
-val Green100 = Color(0xFFDCFCE7)
-val Green900 = Color(0xFF14532D)
+// Accent: Warm coral
+val Coral400 = Color(0xFFFB7185)
+val Coral500 = Color(0xFFF43F5E)
+val Coral100 = Color(0xFFFFE4E6)
+val Coral900 = Color(0xFF881337)
 
-val Orange500 = Color(0xFFF97316)
-val Orange600 = Color(0xFFEA580C)
-val Orange100 = Color(0xFFFED7AA)
-val Orange900 = Color(0xFF7C2D12)
+// Success: Fresh mint
+val Mint400 = Color(0xFF34D399)
+val Mint500 = Color(0xFF10B981)
+val Mint100 = Color(0xFFD1FAE5)
+val Mint900 = Color(0xFF064E3B)
 
-val Purple500 = Color(0xFFA855F7)
-val Purple600 = Color(0xFF9333EA)
-val Purple100 = Color(0xFFF3E8FF)
-val Purple900 = Color(0xFF581C87)
+// Warning: Soft amber
+val Amber400 = Color(0xFFFBBF24)
+val Amber500 = Color(0xFFF59E0B)
+val Amber100 = Color(0xFFFEF3C7)
+val Amber900 = Color(0xFF78350F)
 
-val Pink500 = Color(0xFFEC4899)
-val Pink600 = Color(0xFFDB2777)
-val Pink100 = Color(0xFFFCE7F3)
-val Pink900 = Color(0xFF831843)
+// Purple accent
+val Violet400 = Color(0xFFA78BFA)
+val Violet500 = Color(0xFF8B5CF6)
+val Violet100 = Color(0xFFEDE9FE)
+val Violet900 = Color(0xFF4C1D95)
 
-val Teal500 = Color(0xFF14B8A6)
-val Teal600 = Color(0xFF0D9488)
-val Teal100 = Color(0xFFCCFBF1)
-val Teal900 = Color(0xFF134E4A)
+// Sky blue
+val Sky400 = Color(0xFF38BDF8)
+val Sky500 = Color(0xFF0EA5E9)
+val Sky100 = Color(0xFFE0F2FE)
+val Sky900 = Color(0xFF0C4A6E)
 
-// Neutral
-val Gray50 = Color(0xFFF8FAFC)
-val Gray100 = Color(0xFFF1F5F9)
-val Gray200 = Color(0xFFE2E8F0)
-val Gray300 = Color(0xFFCBD5E1)
-val Gray400 = Color(0xFF94A3B8)
-val Gray500 = Color(0xFF64748B)
-val Gray600 = Color(0xFF475569)
-val Gray700 = Color(0xFF334155)
-val Gray800 = Color(0xFF1E293B)
-val Gray900 = Color(0xFF0F172A)
-val Gray950 = Color(0xFF020617)
+// Neutral: Warm grays (slightly blue-tinted)
+val Slate50 = Color(0xFFF8FAFC)
+val Slate100 = Color(0xFFF1F5F9)
+val Slate200 = Color(0xFFE2E8F0)
+val Slate300 = Color(0xFFCBD5E1)
+val Slate400 = Color(0xFF94A3B8)
+val Slate500 = Color(0xFF64748B)
+val Slate600 = Color(0xFF475569)
+val Slate700 = Color(0xFF334155)
+val Slate800 = Color(0xFF1E293B)
+val Slate900 = Color(0xFF0F172A)
+val Slate950 = Color(0xFF020617)
 
-// Light theme — white background, colorful cards with left accent bars
+// Gradient presets
+val GradientIndigo = Brush.linearGradient(listOf(Indigo500, Violet500))
+val GradientMint = Brush.linearGradient(listOf(Mint400, Sky400))
+val GradientCoral = Brush.linearGradient(listOf(Coral400, Amber400))
+val GradientSoft = Brush.linearGradient(listOf(Indigo50, Violet100))
+val GradientSurface = Brush.verticalGradient(listOf(Color.White, Slate50))
+
+// Light theme — airy, warm white background
 val FocusFlowLightColorScheme = lightColorScheme(
-    primary = Blue600,
+    primary = Indigo600,
     onPrimary = Color.White,
-    primaryContainer = Blue100,
-    onPrimaryContainer = Blue900,
-    secondary = Teal600,
+    primaryContainer = Indigo50,
+    onPrimaryContainer = Indigo900,
+    secondary = Violet500,
     onSecondary = Color.White,
-    secondaryContainer = Teal100,
-    onSecondaryContainer = Teal900,
-    tertiary = Orange500,
+    secondaryContainer = Violet100,
+    onSecondaryContainer = Violet900,
+    tertiary = Mint500,
     onTertiary = Color.White,
-    tertiaryContainer = Orange100,
-    onTertiaryContainer = Orange900,
-    background = Color.White,
-    onBackground = Gray900,
-    surface = Gray50,
-    onSurface = Gray900,
-    surfaceVariant = Gray100,
-    onSurfaceVariant = Gray600,
-    error = Color(0xFFDC2626),
+    tertiaryContainer = Mint100,
+    onTertiaryContainer = Mint900,
+    background = Color(0xFFFCFCFD),
+    onBackground = Slate900,
+    surface = Color.White,
+    onSurface = Slate900,
+    surfaceVariant = Slate50,
+    onSurfaceVariant = Slate500,
+    error = Coral500,
     onError = Color.White,
-    errorContainer = Color(0xFFFEE2E2),
-    onErrorContainer = Color(0xFF7F1D1D),
-    outline = Gray300,
-    outlineVariant = Gray200,
-    scrim = Color.Black,
-    inverseSurface = Gray900,
-    inverseOnSurface = Gray50,
-    inversePrimary = Blue500,
-    surfaceTint = Blue600,
+    errorContainer = Coral100,
+    onErrorContainer = Coral900,
+    outline = Slate200,
+    outlineVariant = Slate100,
+    scrim = Color.Black.copy(alpha = 0.3f),
+    inverseSurface = Slate900,
+    inverseOnSurface = Slate50,
+    inversePrimary = Indigo400,
+    surfaceTint = Indigo500,
 )
 
-// Dark theme — dark gray background, vibrant accents
+// Dark theme — deep navy, soft glows
 val FocusFlowDarkColorScheme = darkColorScheme(
-    primary = Blue500,
-    onPrimary = Color.White,
-    primaryContainer = Blue900,
-    onPrimaryContainer = Blue100,
-    secondary = Teal500,
-    onSecondary = Color.White,
-    secondaryContainer = Teal900,
-    onSecondaryContainer = Teal100,
-    tertiary = Orange500,
-    onTertiary = Color.White,
-    tertiaryContainer = Orange900,
-    onTertiaryContainer = Orange100,
-    background = Gray950,
-    onBackground = Gray100,
-    surface = Gray900,
-    onSurface = Gray100,
-    surfaceVariant = Gray800,
-    onSurfaceVariant = Gray400,
-    error = Color(0xFFF87171),
-    onError = Color.White,
-    errorContainer = Color(0xFF7F1D1D),
-    onErrorContainer = Color(0xFFFEE2E2),
-    outline = Gray600,
-    outlineVariant = Gray700,
-    scrim = Color.Black,
-    inverseSurface = Gray100,
-    inverseOnSurface = Gray900,
-    inversePrimary = Blue600,
-    surfaceTint = Blue500,
+    primary = Indigo400,
+    onPrimary = Indigo900,
+    primaryContainer = Indigo900,
+    onPrimaryContainer = Indigo100,
+    secondary = Violet400,
+    onSecondary = Violet900,
+    secondaryContainer = Violet900,
+    onSecondaryContainer = Violet100,
+    tertiary = Mint400,
+    onTertiary = Mint900,
+    tertiaryContainer = Mint900,
+    onTertiaryContainer = Mint100,
+    background = Slate950,
+    onBackground = Slate100,
+    surface = Slate900,
+    onSurface = Slate100,
+    surfaceVariant = Slate800,
+    onSurfaceVariant = Slate400,
+    error = Coral400,
+    onError = Coral900,
+    errorContainer = Coral900,
+    onErrorContainer = Coral100,
+    outline = Slate700,
+    outlineVariant = Slate800,
+    scrim = Color.Black.copy(alpha = 0.5f),
+    inverseSurface = Slate100,
+    inverseOnSurface = Slate900,
+    inversePrimary = Indigo600,
+    surfaceTint = Indigo400,
 )
 
-// Functional color extensions for cards/indicators
+// Functional color extensions
 object FocusFlowColors {
-    // Light theme functional colors
-    val planColor = Blue500
-    val timerColor = Green500
-    val reviewColor = Purple500
-    val streakColor = Orange500
-    val settingsColor = Gray500
-    val taskColor = Teal500
-    val milestoneColor = Pink500
+    // Functional areas
+    val planColor get() = Indigo500
+    val timerColor get() = Mint500
+    val streakColor get() = Amber500
+    val reviewColor get() = Violet500
+    val settingsColor get() = Slate500
 
-    // Heatmap gradient
+    // Light heatmap
     val heatmapEmpty = Color(0xFFF1F5F9)
-    val heatmapLow = Color(0xFFBBF7D0)
-    val heatmapMedium = Color(0xFF86EFAC)
-    val heatmapHigh = Color(0xFF4ADE80)
-    val heatmapMax = Color(0xFF22C55E)
+    val heatmapLow = Color(0xFFC7D2FE)
+    val heatmapMedium = Color(0xFFA5B4FC)
+    val heatmapHigh = Color(0xFF818CF8)
+    val heatmapMax = Color(0xFF6366F1)
 
     // Dark heatmap
     val heatmapEmptyDark = Color(0xFF1E293B)
-    val heatmapLowDark = Color(0xFF14532D)
-    val heatmapMediumDark = Color(0xFF166534)
-    val heatmapHighDark = Color(0xFF15803D)
-    val heatmapMaxDark = Color(0xFF22C55E)
+    val heatmapLowDark = Color(0xFF312E81)
+    val heatmapMediumDark = Color(0xFF3730A3)
+    val heatmapHighDark = Color(0xFF4338CA)
+    val heatmapMaxDark = Color(0xFF6366F1)
 }
